@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head><title>Canvas code example</title>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script type="text/javascript" src="recurrence.js"></script>
+<script>
+  function id(x) {return x;}
+  
+  var expr = "cos(x)";
+  var axes;
+  var a_0 = 5.0;
+
+
+  function expr_f(x) {
+    var cos = Math.cos;
+    var sin = Math.sin;
+    var sqrt = Math.sqrt;
+    var pow = Math.pow;
+    return eval(expr);
+  }
+
+  function draw() {
+    var canvas = $("#canvas")[0];
+    if (null==canvas || !canvas.getContext) return;
+
+    var ctx=canvas.getContext("2d");
+    var x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
+    var y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
+    var scale = 40;                 // 40 pixels from x=0 to x=1
+    var doNegativeX = true;
+    axes = new Axes(x0, y0, scale, doNegativeX);
+
+    ctx.clearRect ( 0 , 0 , canvas.width, canvas.height );
+    axes.show(ctx);
+    ctx.strokeStyle = "rgb(66,44,255)";
+    ctx.lineWidth = 2;
+    funGraph(ctx, axes, expr_f);
+    ctx.strokeStyle = "rgb(200,200,0)";
+    funGraph(ctx, axes, id);
+    ctx.strokeStyle = "rgb(0,0,0)";
+    ctx.lineWidth = 1;
+    recurrenceWeb(ctx, axes, expr_f, a_0, 20);
+  }
+
+  $(function() {
+     $("#draw").click(function() {
+         expr = $("#expr").val();
+         $("#expr_an").html(expr.replace("x","a(n)"));
+         draw();
+     });
+  
+     $("#canvas").on("mousemove",function(event) {
+       $("#x").html(""+axes.eventX(event));
+       $("#y").html(""+axes.eventY(event));
+     });
+
+     $("#canvas").on("mousedown",function(event) {
+       a_0 = axes.eventX(event);
+       $("#a0").html(""+a_0);
+       draw();
+     });
+
+
+     draw();
+  });
+
+</script>
+</head>
+<body onload="draw()">
+Function: <input id="expr" value="cos(x)"><input id="draw" type="submit" value="draw"> x=<span id="x">?</span>, y=<span id="y">?</span><br />
+a(n+1) = <span id="expr_an">?</span>, a_0 = <span id="a0">?</span><br />
+<canvas id="canvas" width="640" height="480"></canvas>
+</body>
+</html>
