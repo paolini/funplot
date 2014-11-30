@@ -20,13 +20,16 @@
   }
 
   function draw() {
+    $("#a0").html(""+a_0);
+    expr = $("#expr").val();
+    $("#expr_an").html(expr.replace("x","a(n)"));
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
 
     var ctx=canvas.getContext("2d");
     var x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
     var y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
-    var scale = 40;                 // 40 pixels from x=0 to x=1
+    var scale = 80;                 // 40 pixels from x=0 to x=1
     var doNegativeX = true;
     axes = new Axes(x0, y0, scale, doNegativeX);
 
@@ -39,13 +42,16 @@
     funGraph(ctx, axes, id);
     ctx.strokeStyle = "rgb(0,0,0)";
     ctx.lineWidth = 1;
-    recurrenceWeb(ctx, axes, expr_f, a_0, 20);
+    recurrenceWeb(ctx, axes, expr_f, a_0, 100);
   }
 
   $(function() {
+     $("#expr").keyup(function(event) {
+         if (event.keyCode == 13)
+            draw();
+     });
+
      $("#draw").click(function() {
-         expr = $("#expr").val();
-         $("#expr_an").html(expr.replace("x","a(n)"));
          draw();
      });
   
@@ -56,10 +62,8 @@
 
      $("#canvas").on("mousedown",function(event) {
        a_0 = axes.eventX(event);
-       $("#a0").html(""+a_0);
        draw();
      });
-
 
      draw();
   });
