@@ -56,12 +56,14 @@
      });
   
      $("#canvas").on("mousemove",function(event) {
-       $("#x").html(""+axes.eventX(event));
-       $("#y").html(""+axes.eventY(event));
+       var coords = axes.mouse_coords(canvas,event);
+       $("#x").html(""+coords.x);
+       $("#y").html(""+coords.y);
      });
 
      $("#canvas").on("mousedown",function(event) {
-       a_0 = axes.eventX(event);
+       var coords = axes.mouse_coords(canvas,event);
+       a_0 = coords.x;
        draw();
      });
 

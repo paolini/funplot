@@ -1,3 +1,22 @@
+function relMouseCoords(canvas,event){
+    var totalOffsetX = 0;
+    var totalOffsetY = 0;
+    var canvasX = 0;
+    var canvasY = 0;
+    var currentElement = canvas;
+
+    do{
+        totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
+        totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
+    }
+    while(currentElement = currentElement.offsetParent)
+
+    canvasX = event.pageX - totalOffsetX;
+    canvasY = event.pageY - totalOffsetY;
+
+    return {x:canvasX, y:canvasY}
+}
+
 function Axes(x0,y0,scale,doNegativeX) {
     this.x0 = x0;
     this.y0 = y0;
@@ -23,6 +42,11 @@ Axes.prototype.moveTo = function(ctx, x, y) {
 Axes.prototype.lineTo = function(ctx, x, y) {
     ctx.lineTo(this.x0+x*this.scale,this.y0-y*this.scale);
 };
+
+Axes.prototype.mouse_coords = function(canvas,event) {
+    var coords = relMouseCoords(canvas,event);
+    return {x:(coords.x - this.x0)/this.scale, y: (coords.y-this.y0)/this.scale};
+}
 
 Axes.prototype.eventX = function(event) {
     return (event.offsetX-this.x0)/this.scale;
