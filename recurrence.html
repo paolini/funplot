@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <html>
-<head><title>Recurring sequence diagram</title>
+  
+<head>
+  <meta charset="UTF-8">
+  <title>Recurring sequence diagram</title>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<!-- script src="https://raw.githubusercontent.com/kbwood/svg/blob/Release_1_4_5/jquery.svg.js"></script>
+<link rel="stylesheet" type="text/css" href="https://raw.githubusercontent.com/kbwood/svg/blob/Release_1_4_5/jquery.svg.css" -->
 <script type="text/javascript" src="recurrence.js"></script>
 <script>
   function id(x) {return x;}
@@ -32,6 +37,8 @@
     var scale = 80;                 // 40 pixels from x=0 to x=1
     var doNegativeX = true;
     axes = new Axes(x0, y0, scale, doNegativeX);
+
+    $("#svg").append(axes.get_svg());
 
     ctx.clearRect ( 0 , 0 , canvas.width, canvas.height );
     axes.show(ctx);
@@ -76,6 +83,16 @@
 Function: <input id="expr" value="cos(x)"><input id="draw" type="submit" value="draw"> x=<span id="x">?</span>, y=<span id="y">?</span><br />
 a(n+1) = <span id="expr_an">?</span>, a_0 = <span id="a0">?</span><br />
 <canvas id="canvas" width="640" height="480"></canvas>
+
+<svg id="svg" width="640" height="480">
+  <path id="graph"
+	d="M 0 400 L 100 300 L 200 350 L 300 50 L 400 10 L 500 90 L 640 50 "
+	style="stroke:blue;stroke-width:2;fill:none" />
+  <line id="bisector" x1="0" y1="480" x2="640" y2="0" 
+	style="stroke:yellow;stroke-width:2" />
+</svg>
 <p>Source on <a href='https://github.com/paolini/recurrence/'>github</a>
+
+
 </body>
 </html>

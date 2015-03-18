@@ -35,6 +35,30 @@ Axes.prototype.show = function(ctx) {
     ctx.stroke();
 };
 
+function new_svg_elem(elem) {
+    return $(document.createElementNS('http://www.w3.org/2000/svg', elem));
+}
+
+Axes.prototype.get_svg = function() {
+    var g = new_svg_elem("g");
+    g.attr("id", "axes");
+    var xaxis = new_svg_elem("line");
+    xaxis.attr("id", "xaxis");
+    xaxis.attr("x1", 0);
+    xaxis.attr("y1", 240);
+    xaxis.attr("x2", 640);
+    xaxis.attr("y2", 240);
+    var yaxis = new_svg_elem("line");
+    yaxis.attr("id", "yaxis");
+    yaxis.attr("x1", 320);
+    yaxis.attr("y1", 0);
+    yaxis.attr("x2", 320);
+    yaxis.attr("y2", 480);
+    g.append(xaxis);
+    g.append(yaxis);
+    return g;
+};
+
 Axes.prototype.moveTo = function(ctx, x, y) {
     ctx.moveTo(this.x0+x*this.scale,this.y0-y*this.scale);
 };
