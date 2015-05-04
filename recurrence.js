@@ -1,3 +1,7 @@
+function new_svg_elem(elem) {
+    return $(document.createElementNS('http://www.w3.org/2000/svg', elem));
+}
+
 function relMouseCoords(canvas,event){
     var totalOffsetX = 0;
     var totalOffsetY = 0;
@@ -27,7 +31,7 @@ function Axes(x0,y0,scale,doNegativeX) {
 Axes.prototype.show = function(ctx) {
     var w=ctx.canvas.width;
     var h=ctx.canvas.height;
-    var xmin = this.doNegativeX ? 0 : x0;
+    var xmin = this.doNegativeX ? 0 : this.x0;
     ctx.beginPath();
     ctx.strokeStyle = "rgb(128,128,128)"; 
     ctx.moveTo(xmin,this.y0); ctx.lineTo(w,this.y0);  // X axis
@@ -35,28 +39,32 @@ Axes.prototype.show = function(ctx) {
     ctx.stroke();
 };
 
-function new_svg_elem(elem) {
-    return $(document.createElementNS('http://www.w3.org/2000/svg', elem));
-}
-
-Axes.prototype.get_svg = function() {
-    var g = new_svg_elem("g");
-    g.attr("id", "axes");
-    var xaxis = new_svg_elem("line");
-    xaxis.attr("id", "xaxis");
-    xaxis.attr("x1", 0);
-    xaxis.attr("y1", 240);
-    xaxis.attr("x2", 640);
-    xaxis.attr("y2", 240);
-    var yaxis = new_svg_elem("line");
-    yaxis.attr("id", "yaxis");
-    yaxis.attr("x1", 320);
-    yaxis.attr("y1", 0);
-    yaxis.attr("x2", 320);
-    yaxis.attr("y2", 480);
-    g.append(xaxis);
-    g.append(yaxis);
-    return g;
+Axes.prototype.update_svg = function(svg) {
+    var w = svg.attr("width");
+    var h = svg.attr("height");
+    var xmin = this.doNegativeX ? 0 : this.x0;
+    var axes = svg.find("#axes");
+    if (axes.length == 0) {
+	axes = new_svg_elem("g");
+	axes.attr("id", "axes");
+	axes.attr("style", "stroke:black");
+	var xaxis = new_svg_elem("line");
+	xaxis.attr("id", "xaxis");
+	xaxis.attr("x1", xmin);
+	xaxis.attr("y1", this.y0);
+	xaxis.attr("x2", w);
+	xaxis.attr("y2", this.y0);
+	var yaxis = new_svg_elem("line");
+	yaxis.attr("id", "yaxis");
+	yaxis.attr("x1", this.x0);
+	yaxis.attr("y1", 0);
+	yaxis.attr("x2", this.x0);
+	yaxis.attr("y2", h);
+	axes.append(xaxis);
+	axes.append(yaxis);
+	svg.append(axes);
+    }
+    return axes;
 };
 
 Axes.prototype.moveTo = function(ctx, x, y) {
@@ -106,4 +114,17 @@ function recurrenceWeb (ctx,axes,func,x,n) {
 	x = y;
     }
     ctx.stroke()
+}
+
+function svgGraphPath (axes,func) {
+    var yy, x, dx=4, x0=axes.x0, y0=axes.y0, scale=axes.scale;
+    var iMax = Math.round((ctx.canvas.width-x0)/dx);
+    var iMin = axes.doNegativeX ? Math.round(-x0/dx) : 0;
+    var d = "";
+    for (var i=iMin;i<=iMax;i++) {
+	x = i*dx/scale;
+	if (i==iMin) axes.moveTo(ctx, x, func(x));
+	else         axes.lineTo(ctx, x, func(x));
+    }
+    ctx.stroke();
 }
