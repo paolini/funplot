@@ -75,6 +75,12 @@ Axes.prototype.lineTo = function(ctx, x, y) {
     ctx.lineTo(this.x0+x*this.scale,this.y0-y*this.scale);
 };
 
+Axes.prototype.drawPoint = function(ctx, x, y) {
+    ctx.beginPath();
+    ctx.arc(this.x0+x*this.scale, this.y0-y*this.scale, 2.0, 0, 2 * Math.PI, false);
+    ctx.stroke();
+};
+
 Axes.prototype.mouse_coords = function(canvas,event) {
     var coords = relMouseCoords(canvas,event);
     return {x:(coords.x - this.x0)/this.scale, y: (coords.y-this.y0)/this.scale};
@@ -103,7 +109,7 @@ function funGraph (ctx,axes,func) {
 }
 
 function recurrenceWeb (ctx,axes,func,x,n) {
-    var xx, yy, dx=4, x0=axes.x0, y0=axes.y0, scale=axes.scale;
+    var x_0 = x;
     ctx.beginPath();
     axes.moveTo(ctx, x, 0);
     for (var i=0; i<n; ++i) {
@@ -114,6 +120,13 @@ function recurrenceWeb (ctx,axes,func,x,n) {
 	x = y;
     }
     ctx.stroke()
+    x = x_0;
+    for (var i=0; i<n; ++i) {
+	var y=func(x);
+	if (!isFinite(y) || Math.abs(y)>10E10) break;
+	axes.drawPoint(ctx, x, 0);
+	x = y;
+    }
 }
 
 function svgGraphPath (axes,func) {
