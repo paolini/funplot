@@ -67,19 +67,31 @@ Axes.prototype.update_svg = function(svg) {
     return axes;
 };
 
+Axes.prototype.pixel_x = function(x) {
+    return this.x0 + x*this.scale;
+}
+
+Axes.prototype.pixel_y = function(y) {
+    return this.y0 - y*this.scale;
+}
+
 Axes.prototype.moveTo = function(ctx, x, y) {
-    ctx.moveTo(this.x0+x*this.scale,this.y0-y*this.scale);
+    ctx.moveTo(this.pixel_x(x), this.pixel_y(y));
 };
 
 Axes.prototype.lineTo = function(ctx, x, y) {
-    ctx.lineTo(this.x0+x*this.scale,this.y0-y*this.scale);
+    ctx.lineTo(this.pixel_x(x), this.pixel_y(y));
 };
 
 Axes.prototype.drawPoint = function(ctx, x, y) {
     ctx.beginPath();
-    ctx.arc(this.x0+x*this.scale, this.y0-y*this.scale, 2.0, 0, 2 * Math.PI, false);
+    ctx.arc(this.pixel_x(x), this.pixel_y(y), 2.0, 0, 2 * Math.PI, false);
     ctx.stroke();
 };
+
+Axes.prototype.drawText = function(ctx, x, y, text) {
+    ctx.fillText(text, this.pixel_x(x)-2, this.pixel_y(y)+10);
+}
 
 Axes.prototype.mouse_coords = function(canvas,event) {
     var coords = relMouseCoords(canvas,event);
@@ -108,24 +120,37 @@ function funGraph (ctx,axes,func) {
     ctx.stroke();
 }
 
-function recurrenceWeb (ctx,axes,func,x,n) {
-    var x_0 = x;
-    ctx.beginPath();
-    axes.moveTo(ctx, x, 0);
-    for (var i=0; i<n; ++i) {
+function recurrenceSequence(func, x, n) {
+    r = [];
+    r.push(x);
+    for (var i=0; i<n-1; ++i) {
 	var y=func(x);
 	if (!isFinite(y) || Math.abs(y)>10E10) break;
+	x = y;
+	r.push(x);
+    }
+    return r;
+}
+
+function recurrenceWeb (ctx, axes, sequence) {
+    ctx.strokeStyle = "rgb(0,0,0)";
+    ctx.beginPath();
+    axes.moveTo(ctx, sequence[0], 0);
+    for (var i=0; i<sequence.length-1; ++i) {
+	var x = sequence[i];
+	var y = sequence[i+1]
+	if (Math.abs(y) > 10E4) break;
 	axes.lineTo(ctx, x, y);
 	axes.lineTo(ctx, y, y);
-	x = y;
     }
     ctx.stroke()
-    x = x_0;
-    for (var i=0; i<n; ++i) {
-	var y=func(x);
-	if (!isFinite(y) || Math.abs(y)>10E10) break;
-	axes.drawPoint(ctx, x, 0);
-	x = y;
+    ctx.strokeStyle = "rgb(255,0,0)";
+    ctx.fillStyle = "rgb(50,50,50)";
+    for (var i=0; i<sequence.length; ++i) {
+	axes.drawPoint(ctx, sequence[i], 0);
+	if (i<10) {
+	    axes.drawText(ctx, sequence[i], 0, i);
+	}
     }
 }
 
@@ -185,7 +210,8 @@ function draw() {
     funGraph(ctx, axes, id);
     ctx.strokeStyle = "rgb(0,0,0)";
     ctx.lineWidth = 1;
-    recurrenceWeb(ctx, axes, expr_f, a_0, 100);
+    var sequence = recurrenceSequence(expr_f, a_0, 100);
+    recurrenceWeb(ctx, axes, sequence);
 }
 
 function get_circle() {
@@ -206,12 +232,16 @@ function get_querystring_params() {
 	decode = function (s) {
 	    return decodeURIComponent(s.replace(pl, " "));
 	};
-    query = window.location.search.substring(1);
+    var query = window.location.search.substring(1);
     
     while (match = search.exec(query)) {
 	urlParams[decode(match[1])] = decode(match[2]);
     }
     return urlParams;
+}
+
+function get_my_url() {
+    return window.location.origin + window.location.pathname;
 }
 
 $(function() {
@@ -232,6 +262,11 @@ $(function() {
     
     $("#draw").click(function() {
         draw();
+    });
+
+    $("#share").click(function() {
+	var url = get_my_url() + "?expr=" + encodeURIComponent(expr) + "&x=" + encodeURIComponent(a_0);
+	alert("Shareable URL: " + url);
     });
     
     $("#canvas").on("mousemove",function(event) {
