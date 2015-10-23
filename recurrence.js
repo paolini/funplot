@@ -176,6 +176,9 @@ var expr = "cos(x)";
 var axes;
 var a_0 = 5.0;
 
+var scale = 80.0;                 // 40 pixels from x=0 to x=1
+var xoff = 0.0; // offset x
+var yoff = 0.0; // offset y
 
 function expr_f(x) {
     var cos = Math.cos;
@@ -195,9 +198,8 @@ function draw() {
     var ctx=canvas.getContext("2d");
     var x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
     var y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
-    var scale = 80;                 // 40 pixels from x=0 to x=1
     var doNegativeX = true;
-    axes = new Axes(x0, y0, scale, doNegativeX);
+    axes = new Axes(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
     
     axes.update_svg($("svg"));
     
@@ -252,20 +254,42 @@ $(function() {
     }
     
     if (params['x'] != undefined) {
-	a_0 = params['x'];
+	a_0 = parseFloat(params['x']);
+    }
+
+    if (params['scale'] != undefined) {
+	scale = parseFloat(params['scale']);
+    }
+
+    if (params['xoff'] != undefined) {
+	xoff = parseFloat(params['xoff']);
     }
     
-     $("#expr").keyup(function(event) {
-         if (event.keyCode == 13)
-             draw();
-     });
+    if (params['yoff'] != undefined) {
+	yoff = parseFloat(params['yoff']);
+    }
+    
+    $("#expr").keyup(function(event) {
+        if (event.keyCode == 13)
+            draw();
+    });
     
     $("#draw").click(function() {
         draw();
     });
 
     $("#share").click(function() {
-	var url = get_my_url() + "?expr=" + encodeURIComponent(expr) + "&x=" + encodeURIComponent(a_0);
+	var params = {
+	    "expr": expr,
+	    "x": a_0,
+	    "scale": scale
+	}
+	var url = get_my_url();
+	var sep = "?";
+	for (key in params) {
+	    url += sep + key + "=" + encodeURIComponent(params[key]);
+	    sep = "&";
+	}
 	alert("Shareable URL: " + url);
     });
     
