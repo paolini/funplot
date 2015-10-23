@@ -248,7 +248,11 @@ function get_querystring_params() {
 }
 
 function get_my_url() {
-    return window.location.origin + window.location.pathname;
+    var origin = window.location.origin;
+    if (origin == "null") { // see https://bugzilla.mozilla.org/show_bug.cgi?id=878297
+	origin = "file://";
+    }
+    return origin + window.location.pathname;
 }
 
 function update() {
