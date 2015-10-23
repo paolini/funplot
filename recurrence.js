@@ -107,15 +107,20 @@ Axes.prototype.eventY = function(event) {
 };
     
 function funGraph (ctx,axes,func) {
-    var yy, x, dx=4, x0=axes.x0, y0=axes.y0, scale=axes.scale;
+    var yy, x, dx=2, x0=axes.x0, y0=axes.y0, scale=axes.scale;
     var iMax = Math.round((ctx.canvas.width-x0)/dx);
     var iMin = axes.doNegativeX ? Math.round(-x0/dx) : 0;
     ctx.beginPath();
-
+    
     for (var i=iMin;i<=iMax;i++) {
 	x = i*dx/scale;
-	if (i==iMin) axes.moveTo(ctx, x, func(x));
-	else         axes.lineTo(ctx, x, func(x));
+	var y = func(x);
+	if (i==iMin || Math.abs(y-yy)>dx*100) {
+	    axes.moveTo(ctx, x, func(x));
+	} else {
+            axes.lineTo(ctx, x, func(x));
+	}
+	yy = y;
     }
     ctx.stroke();
 }
@@ -246,6 +251,22 @@ function get_my_url() {
     return window.location.origin + window.location.pathname;
 }
 
+function update() {
+    draw();
+    var params = {
+	"expr": expr,
+	"x": a_0,
+	"scale": scale
+    }
+    var url = get_my_url();
+    var sep = "?";
+    for (key in params) {
+	url += sep + key + "=" + encodeURIComponent(params[key]);
+	sep = "&";
+    }
+    $("#share").attr("href", url);
+}
+
 $(function() {
     params = get_querystring_params();
     
@@ -271,28 +292,13 @@ $(function() {
     
     $("#expr").keyup(function(event) {
         if (event.keyCode == 13)
-            draw();
+            update();
     });
     
     $("#draw").click(function() {
-        draw();
+        update();
     });
 
-    $("#share").click(function() {
-	var params = {
-	    "expr": expr,
-	    "x": a_0,
-	    "scale": scale
-	}
-	var url = get_my_url();
-	var sep = "?";
-	for (key in params) {
-	    url += sep + key + "=" + encodeURIComponent(params[key]);
-	    sep = "&";
-	}
-	alert("Shareable URL: " + url);
-    });
-    
     $("#canvas").on("mousemove",function(event) {
 	var coords = axes.mouse_coords(canvas,event);
 	$("#x").html(""+coords.x);
@@ -302,9 +308,9 @@ $(function() {
     $("#canvas").on("mousedown",function(event) {
        var coords = axes.mouse_coords(canvas,event);
 	a_0 = coords.x;
-	draw();
+	update();
     });
     
-    draw();
+    update();
 });
 
