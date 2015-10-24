@@ -178,6 +178,7 @@ function svgGraphPath (axes,func) {
 function id(x) {return x;}
 
 var expr = "cos(x)";
+var compiled_expr;
 var axes;
 var a_0 = 5.0;
 
@@ -186,6 +187,8 @@ var xoff = 0.0; // offset x
 var yoff = 0.0; // offset y
 
 function expr_f(x) {
+    return compiled_expr.eval({"x": x});
+    
     var cos = Math.cos;
     var sin = Math.sin;
     var sqrt = Math.sqrt;
@@ -196,6 +199,7 @@ function expr_f(x) {
 function draw() {
     $("#a0").html(""+a_0);
     expr = $("#expr").val();
+    compiled_expr = math.compile(expr);
     $("#expr_an").html(expr.replace("x","a(n)"));
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
