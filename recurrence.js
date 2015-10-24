@@ -2,23 +2,12 @@ function new_svg_elem(elem) {
     return $(document.createElementNS('http://www.w3.org/2000/svg', elem));
 }
 
-function relMouseCoords(canvas,event){
-    var totalOffsetX = 0;
-    var totalOffsetY = 0;
-    var canvasX = 0;
-    var canvasY = 0;
-    var currentElement = canvas;
-
-    do{
-        totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
-        totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
-    }
-    while(currentElement = currentElement.offsetParent)
-
-    canvasX = event.pageX - totalOffsetX;
-    canvasY = event.pageY - totalOffsetY;
-
-    return {x:canvasX, y:canvasY}
+function getMousePos(canvas, evt) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+	x: evt.clientX - rect.left,
+	y: evt.clientY - rect.top
+    };
 }
 
 function Axes(x0,y0,scale,doNegativeX) {
@@ -102,7 +91,7 @@ Axes.prototype.drawText = function(ctx, x, y, text) {
 }
 
 Axes.prototype.mouse_coords = function(canvas,event) {
-    var coords = relMouseCoords(canvas,event);
+    var coords = getMousePos(canvas, event);
     return {x:this.x_pixel(coords.x), y: this.y_pixel(coords.y)};
 }
 
@@ -196,12 +185,6 @@ var yoff = 0.0; // offset y
 
 function expr_f(x) {
     return compiled_expr.eval({"x": x});
-    
-    var cos = Math.cos;
-    var sin = Math.sin;
-    var sqrt = Math.sqrt;
-    var pow = Math.pow;
-    return eval(expr);
 }
 
 function draw() {
@@ -272,7 +255,9 @@ function update() {
     var params = {
 	"expr": expr,
 	"x": a_0,
-	"scale": scale
+	"scale": scale,
+	"xoff": xoff,
+	"yoff": yoff
     }
     var url = get_my_url();
     var sep = "?";
@@ -325,6 +310,19 @@ $(function() {
        var coords = axes.mouse_coords(canvas,event);
 	a_0 = coords.x;
 	update();
+    });
+    
+    // if mousewheel is moved
+    $("#canvas").mousewheel(function(e, delta) {
+	var coords = axes.mouse_coords(canvas, e);
+	// determine the new scale
+	var factor = 1.05
+	if (delta < 0) factor = 1.0/factor
+	scale *= factor
+	xoff = coords.x + (xoff-coords.x) / factor;
+	yoff = coords.y + (yoff-coords.y) / factor;
+	update();
+	return false;
     });
     
     update();
