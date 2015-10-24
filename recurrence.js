@@ -75,6 +75,14 @@ Axes.prototype.pixel_y = function(y) {
     return this.y0 - y*this.scale;
 }
 
+Axes.prototype.x_pixel = function(x) {
+    return (x - this.x0)/this.scale;
+}
+
+Axes.prototype.y_pixel = function(y) {
+    return (this.y0 - y)/this.scale;
+}
+
 Axes.prototype.moveTo = function(ctx, x, y) {
     ctx.moveTo(this.pixel_x(x), this.pixel_y(y));
 };
@@ -95,15 +103,15 @@ Axes.prototype.drawText = function(ctx, x, y, text) {
 
 Axes.prototype.mouse_coords = function(canvas,event) {
     var coords = relMouseCoords(canvas,event);
-    return {x:(coords.x - this.x0)/this.scale, y: (coords.y-this.y0)/this.scale};
+    return {x:this.x_pixel(coords.x), y: this.y_pixel(coords.y)};
 }
 
 Axes.prototype.eventX = function(event) {
-    return (event.offsetX-this.x0)/this.scale;
+    return this.x_pixel(event.offsetX);
 };
 
 Axes.prototype.eventY = function(event) {
-    return (event.offsetY-this.y0)/this.scale;
+    return this.y_pixel(event.offsetY);
 };
     
 function funGraph (ctx,axes,func) {
