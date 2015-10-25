@@ -151,7 +151,7 @@ function recurrenceWeb (ctx, axes, sequence) {
     for (var i=0; i<sequence.length; ++i) {
 	axes.drawPoint(ctx, sequence[i], 0);
 	if (i<10) {
-	    axes.drawText(ctx, sequence[i], 0, i);
+	    axes.drawText(ctx, sequence[i], 0, i+1);
 	}
     }
 }
@@ -187,11 +187,15 @@ function expr_f(x) {
     return compiled_expr.eval({"x": x});
 }
 
-function draw() {
-    $("#a0").html(""+a_0);
-    expr = $("#expr").val();
-    compiled_expr = math.compile(expr);
-    $("#expr_an").html(expr.replace("x","a(n)"));
+function fill_table(table_id, sequence) {
+    $("#"+table_id+" tr").remove();
+    for (var i=0; i<sequence.length; i++) {
+	$("#"+table_id).append("<tr><td>a(" + (i+1) + ")</td><td>" + sequence[i] + "</td></tr>");
+    }
+    
+}
+
+function draw(sequence) {
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
     
@@ -212,7 +216,6 @@ function draw() {
     funGraph(ctx, axes, id);
     ctx.strokeStyle = "rgb(0,0,0)";
     ctx.lineWidth = 1;
-    var sequence = recurrenceSequence(expr_f, a_0, 100);
     recurrenceWeb(ctx, axes, sequence);
 }
 
@@ -251,7 +254,15 @@ function get_my_url() {
 }
 
 function update() {
-    draw();
+    $("#a0").html(""+a_0);
+    expr = $("#expr").val();
+    compiled_expr = math.compile(expr);
+    $("#formula").html('$$\\begin{cases}a_1=' + a_0 + '\\\\a_{n+1}=' + math.parse(expr.replace('x','a_n')).toTex() + '\\end{cases}$$');
+    MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+    
+    var sequence = recurrenceSequence(expr_f, a_0, 100);
+    draw(sequence);
+    fill_table("table", sequence);
     var params = {
 	"expr": expr,
 	"x": a_0,
@@ -316,7 +327,7 @@ $(function() {
     $("#canvas").mousewheel(function(e, delta) {
 	var coords = axes.mouse_coords(canvas, e);
 	// determine the new scale
-	var factor = 1.05
+	var factor = 1.04
 	if (delta < 0) factor = 1.0/factor
 	scale *= factor
 	xoff = coords.x + (xoff-coords.x) / factor;

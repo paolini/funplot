@@ -1,0 +1,11 @@
+table, th, td {
+    border: 1px solid brown;
+    border-collapse: collapse;
+    padding: 2px;
+    background: cornflowerblue;
+}
+
+canvas {
+    background: #eee;
+    border: 1px;
+}
