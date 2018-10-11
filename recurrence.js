@@ -22,7 +22,7 @@ Axes.prototype.show = function(ctx) {
     var h=ctx.canvas.height;
     var xmin = this.doNegativeX ? 0 : this.x0;
     ctx.beginPath();
-    ctx.strokeStyle = "rgb(128,128,128)"; 
+    ctx.strokeStyle = "rgb(128,128,128)";
     ctx.moveTo(xmin,this.y0); ctx.lineTo(w,this.y0);  // X axis
     ctx.moveTo(this.x0,0);    ctx.lineTo(this.x0,h);  // Y axis
     ctx.stroke();
@@ -102,13 +102,13 @@ Axes.prototype.eventX = function(event) {
 Axes.prototype.eventY = function(event) {
     return this.y_pixel(event.offsetY);
 };
-    
+
 function funGraph (ctx,axes,func) {
     var yy, x, dx=2, x0=axes.x0, y0=axes.y0, scale=axes.scale;
     var iMax = Math.round((ctx.canvas.width-x0)/dx);
     var iMin = axes.doNegativeX ? Math.round(-x0/dx) : 0;
     ctx.beginPath();
-    
+
     for (var i=iMin;i<=iMax;i++) {
 	x = i*dx/scale;
 	var y = func(x);
@@ -191,18 +191,18 @@ function draw() {
     $("#a0").html(""+a_0);
     expr = $("#expr").val();
     compiled_expr = math.compile(expr);
-    $("#expr_an").html(expr.replace("x","a(n)"));
+    $("#expr_an").html(expr.replace(/x/g,"a(n)"));
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
-    
+
     var ctx=canvas.getContext("2d");
     var x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
     var y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
     var doNegativeX = true;
     axes = new Axes(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
-    
+
     axes.update_svg($("svg"));
-    
+
     ctx.clearRect ( 0 , 0 , canvas.width, canvas.height );
     axes.show(ctx);
     ctx.strokeStyle = "rgb(66,44,255)";
@@ -235,7 +235,7 @@ function get_querystring_params() {
 	    return decodeURIComponent(s.replace(pl, " "));
 	};
     var query = window.location.search.substring(1);
-    
+
     while (match = search.exec(query)) {
 	urlParams[decode(match[1])] = decode(match[2]);
     }
@@ -270,11 +270,11 @@ function update() {
 
 $(function() {
     params = get_querystring_params();
-    
+
     if (params['expr']) {
         $("#expr").val(params['expr']);
     }
-    
+
     if (params['x'] != undefined) {
 	a_0 = parseFloat(params['x']);
     }
@@ -286,16 +286,16 @@ $(function() {
     if (params['xoff'] != undefined) {
 	xoff = parseFloat(params['xoff']);
     }
-    
+
     if (params['yoff'] != undefined) {
 	yoff = parseFloat(params['yoff']);
     }
-    
+
     $("#expr").keyup(function(event) {
         if (event.keyCode == 13)
             update();
     });
-    
+
     $("#draw").click(function() {
         update();
     });
@@ -305,13 +305,13 @@ $(function() {
 	$("#x").html(""+coords.x);
 	$("#y").html(""+coords.y);
     });
-    
+
     $("#canvas").on("mousedown",function(event) {
        var coords = axes.mouse_coords(canvas,event);
 	a_0 = coords.x;
 	update();
     });
-    
+
     // if mousewheel is moved
     $("#canvas").mousewheel(function(e, delta) {
 	var coords = axes.mouse_coords(canvas, e);
@@ -324,7 +324,6 @@ $(function() {
 	update();
 	return false;
     });
-    
+
     update();
 });
-
