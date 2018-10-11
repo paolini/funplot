@@ -257,7 +257,7 @@ function update() {
     $("#a0").html(""+a_0);
     expr = $("#expr").val();
     compiled_expr = math.compile(expr);
-    $("#formula").html('$$\\begin{cases}a_1=' + a_0 + '\\\\a_{n+1}=' + math.parse(expr.replace('x','a_n')).toTex() + '\\end{cases}$$');
+    $("#formula").html('$$\\begin{cases}a_1=' + a_0 + '\\\\a_{n+1}=' + math.parse(expr.replace(/x/g,'a_n')).toTex() + '\\end{cases}$$');
     MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 
     var sequence = recurrenceSequence(expr_f, a_0, 100);
