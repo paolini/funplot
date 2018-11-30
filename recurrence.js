@@ -144,19 +144,16 @@ function get_querystring_params() {
   	    return decodeURIComponent(s.replace(pl, " "));
   	};
     var query = window.location.search.substring(1);
+    if (query == "") {
+      // be backwarda compatible: previously the querystring was used
+      // now the hash part (which doesn't require reloading)
+      query = window.location.hash.substring(1);
+    }
 
     while (match = search.exec(query)) {
     	urlParams[decode(match[1])] = decode(match[2]);
     }
     return urlParams;
-}
-
-function get_my_url() {
-    var origin = window.location.origin;
-    if (origin == "null") { // see https://bugzilla.mozilla.org/show_bug.cgi?id=878297
-    	origin = "file://";
-    }
-    return origin + window.location.pathname;
 }
 
 function update() {
@@ -176,13 +173,13 @@ function update() {
     	"xoff": xoff,
     	"yoff": yoff
     }
-    var url = get_my_url();
-    var sep = "?";
+    var querystring = "";
+    var sep = "";
     for (key in params) {
-    	url += sep + key + "=" + encodeURIComponent(params[key]);
+    	querystring += sep + key + "=" + encodeURIComponent(params[key]);
     	sep = "&";
     }
-    $("#share").attr("href", url);
+    window.location.hash = querystring
 }
 
 $(function() {
