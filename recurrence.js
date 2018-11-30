@@ -143,11 +143,11 @@ function get_querystring_params() {
   	decode = function (s) {
   	    return decodeURIComponent(s.replace(pl, " "));
   	};
-    var query = window.location.search.substring(1);
+    var query = window.location.hash.substring(1);
     if (query == "") {
       // be backwarda compatible: previously the querystring was used
       // now the hash part (which doesn't require reloading)
-      query = window.location.hash.substring(1);
+      query = window.location.search.substring(1);
     }
 
     while (match = search.exec(query)) {
