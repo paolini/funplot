@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Cobweb diagram for recurring sequences</title>
+  <title>ode plot</title>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <!-- script src="https://raw.githubusercontent.com/kbwood/svg/blob/Release_1_4_5/jquery.svg.js"></script>
      <link rel="stylesheet" type="text/css" href="https://raw.githubusercontent.com/kbwood/svg/blob/Release_1_4_5/jquery.svg.css" -->
@@ -13,25 +13,18 @@
 <link rel="stylesheet" href="index.css">
 </head>
 <body>
-<h1>Recurring sequences</h1>
-<h2>Interactive Cobweb diagram</h2>
+<h1>ODE plot</h1>
+<h2>y'(x) = f(x,y(x))</h2>
 
-Function: <input id="expr" value="cos(x)"><input id="draw" type="submit" value="draw">x=<span id="x">?</span>, y=<span id="y">?</span><br />
+Function: y'(x) = <input id="expr" value="y^2+x"><input id="draw" type="submit" value="set">x=<span id="x">?</span>, y=<span id="y">?</span><br />
+<input id="draw_slope" type="checkbox">draw slope field
+<button id="clear_button">clear integral lines</button>
 <p id="formula">...</p>
+<p>(Click on the picture to draw an integral line. Mouse wheel (or pan) to zoom in/out. Use zoom out/in to translate)</p>
 <canvas id="canvas" width="640" height="480"></canvas>
-<table id="table">
-</table>
-
-<!--svg id="svg" width="640" height="480">
-  <path id="graph"
-	d="M 0 400 L 100 300 L 200 350 L 300 50 L 400 10 L 500 90 L 640 50 "
-	style="stroke:blue;stroke-width:2;fill:none" />
-  <line id="bisector" x1="0" y1="480" x2="640" y2="0"
-	style="stroke:yellow;stroke-width:2" />
-</svg-->
 <p>Source on <a href='https://github.com/paolini/recurrence/'>github</a>
 <script src="plot.js"></script>
 <script src="util.js"></script>
-<script type="text/javascript" src="recurrence.js"></script>
+<script type="text/javascript" src="ode.js"></script>
 </body>
 </html>
