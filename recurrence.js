@@ -106,7 +106,12 @@ function get_circle() {
 function update() {
     $("#a0").html(""+a_0);
     expr = $("#expr").val();
-    compiled_expr = math.compile(expr);
+    try {
+      compiled_expr = math.compile(expr);
+    } catch(e) {
+      alert(e);
+      return;
+    }
     $("#formula").html('$$\\begin{cases}a_1=' + a_0 + '\\\\a_{n+1}=' + math.parse(expr.replace(/x/g,'a_n')).toTex() + '\\end{cases}$$');
     MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 

@@ -90,7 +90,12 @@ function expr_f(x, y) {
 
 function update() {
     expr = $("#expr").val();
-    compiled_expr = math.compile(expr);
+    try {
+      compiled_expr = math.compile(expr);
+    } catch(e) {
+      alert(e);
+      return;
+    }
     $("#formula").html('$$y\' = ' + math.parse(expr.replace(/y/g,'y')).toTex() + '$$');
     MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 
