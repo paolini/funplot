@@ -5,9 +5,17 @@ var draw_slope;
 
 var points = [];
 
+var reference = {
+  xCenter: 0.0,
+  yCenter: 0.0,
+  radius: Math.sqrt(320*320 + 240*240) / 80
+};
+
+/*
 var scale = 80.0;                 // 40 pixels from x=0 to x=1
 var xoff = 0.0; // offset x
 var yoff = 0.0; // offset y
+*/
 
 function slopeGraph(ctx, plot, fun) {
   var xmin = plot.x_pixel(0);
@@ -59,34 +67,51 @@ function draw() {
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
 
-    var ctx=canvas.getContext("2d");
+    var x0, y0;
+
+    /*
     var x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
     var y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
-    var doNegativeX = true;
+    x0 -= xoff*scale;
+    y0 += yoff*scale;
     plot = new Plot(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
 
+    (x - x0)/this.scale   // logical coord
+
+    var xCenter = x0-xoff*scale + canvas.width / scale;
+    var yCenter = yoff + canvas.height / scale;
+    canvas.height = $("#bottom").offset().top - $("#canvas").offset().top;
+    scale *= window.innerWidth / canvas.width;
+    canvas.width = window.innerWidth;
+    xoff = xCenter - canvas.width / scale;
+    yoff = yCenter - canvas.height / scale;
+    */
+
+    /*
+    x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
+    y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
+    plot = new Plot(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
+    */
+
+    plot.setReference(reference);
     plot.update_svg($("svg"));
 
-    ctx.clearRect ( 0 , 0 , canvas.width, canvas.height );
+    var ctx=canvas.getContext("2d");
+    ctx.clearRect (0 ,0 , canvas.width, canvas.height);
     plot.show(ctx);
-    ctx.strokeStyle = "rgb(66,44,255)";
     ctx.lineWidth = 2;
-
-    // funGraph(ctx, plot, expr_f);
     ctx.strokeStyle = "rgb(200,200,0)";
     if (draw_slope) slopeGraph(ctx, plot, expr_f);
-    ctx.strokeStyle = "rgb(0,0,0)";
     ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgb(66,44,255)";
     for (var i=0; i<points.length; ++i) {
         odePlot(ctx, plot, expr_f, points[i].x, points[i].y);
     }
 }
 
-
 function expr_f(x, y) {
     return compiled_expr.eval({"x": x, "y": y});
 }
-
 
 function update() {
     expr = $("#expr").val();
@@ -108,9 +133,9 @@ function update() {
     }
     var params = {
     	"expr": expr,
-    	"scale": scale.toFixed(3),
-      "xoff": xoff.toFixed(3),
-      "yoff": yoff.toFixed(3),
+    	"r": reference.radius.toFixed(3),
+      "x": reference.xCenter.toFixed(3),
+      "y": reference.yCenter.toFixed(3),
       "points": point_string
     }
     var querystring = "";
@@ -122,9 +147,10 @@ function update() {
     window.location.hash = querystring
 }
 
-
 $(function() {
     console.log("ode plot, manu-fatto, https://github.com/paolini/recurrence/")
+
+    plot = new Plot(0, 0, 0, true);
 
     params = get_querystring_params();
 
@@ -132,18 +158,21 @@ $(function() {
         $("#expr").val(params['expr']);
     }
 
+    if (params['r']) reference.radius = parseFloat(params['r']);
+    if (params['x']) reference.xCenter = parseFloat(params['x']);
+    if (params['y']) reference.yCenter = parseFloat(params['y']);
+
+    /*
     if (params['scale'] != undefined) {
 	     scale = parseFloat(params['scale']);
     }
-
     if (params['xoff'] != undefined) {
 	     xoff = parseFloat(params['xoff']);
     }
-
     if (params['yoff'] != undefined) {
 	     yoff = parseFloat(params['yoff']);
     }
-
+    */
     if (params['points'] != undefined && params['points'].length>0) {
       var l = params['points'].split(' ');
       points = [];
@@ -178,8 +207,8 @@ $(function() {
     $("#canvas").on("mousemove",function(event) {
       if (plot) {
       	var coords = plot.mouse_coords(canvas,event);
-      	$("#x").html(""+coords.x);
-      	$("#y").html(""+coords.y);
+      	$("#x").html(""+coords.x.toFixed(4));
+      	$("#y").html(""+coords.y.toFixed(4));
       }
     });
 
@@ -193,16 +222,23 @@ $(function() {
 
     // if mousewheel is moved
     $("#canvas").mousewheel(function(e, delta) {
+      if (!plot) return;
     	var coords = plot.mouse_coords(canvas, e);
     	// determine the new scale
     	var factor = 1.04
     	if (delta < 0) factor = 1.0/factor
+      plot.zoom(factor, coords.x, coords.y);
+      reference = plot.getReference();
+      /*
     	scale *= factor
     	xoff = coords.x + (xoff-coords.x) / factor;
     	yoff = coords.y + (yoff-coords.y) / factor;
+      */
     	update();
     	return false;
     });
+
+    // $(window).resize(update);
 
     update();
 });

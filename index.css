@@ -1,3 +1,4 @@
+
 table, th, td {
     border: 1px solid brown;
     border-collapse: collapse;
@@ -9,3 +10,5 @@ canvas {
     background: #eee;
     border: 1px;
 }
+
+#bottom { position: fixed; bottom: 0; }

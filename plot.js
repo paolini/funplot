@@ -1,8 +1,44 @@
-function Plot(x0,y0,scale,doNegativeX) {
+function Plot(x0, y0, scale, doNegativeX) {
     this.x0 = x0;
     this.y0 = y0;
     this.scale = scale;
     this.doNegativeX = doNegativeX;
+}
+
+Plot.prototype.zoom = function(factor, x, y) {
+  var xoff = (320.5 - this.x0) / this.scale;
+  var yoff = (this.y0 - 240.5) / this.scale;
+  xoff = x + (xoff-x) / factor;
+  yoff = y + (yoff-y) / factor;
+  this.scale *= factor;
+  this.x0 = 320.5 - xoff * this.scale;
+  this.y0 = 240.5 + yoff * this.scale;
+}
+
+Plot.prototype.setReference = function(reference) {
+  this.scale = Math.sqrt(320*320 + 240*240) / reference.radius;
+  this.x0 = 320 - reference.xCenter * this.scale;
+  this.y0 = 240 + reference.yCenter * this.scale;
+}
+
+Plot.prototype.getReference = function() {
+    return {
+      widthPx: 640,
+      heightPx: 480,
+      xMin: (0 - this.x0) / this.scale,
+      xCenter: (320 - this.x0) / this.scale,
+      xMax: (640 - this.x0) / this.scale,
+      yMin: (this.y0 - 480) / this.scale,
+      yCenter: (this.y0 - 240) / this.scale,
+      yMax: (this.y0 - 0) / this.scale,
+      radius: Math.sqrt(320*320 + 240*240) / this.scale,
+
+      x0: this.x0,
+      y0: this.y0,
+      scale: this.scale,
+      xoff: (320.5 - this.x0) / this.scale,
+      yoff: (this.y0 - 240.5) / this.scale
+    };
 }
 
 Plot.prototype.show = function(ctx) {
