@@ -5,12 +5,6 @@ var draw_slope;
 
 var points = [];
 
-var reference = {
-  xCenter: 0.0,
-  yCenter: 0.0,
-  radius: Math.sqrt(320*320 + 240*240) / 80
-};
-
 /*
 var scale = 80.0;                 // 40 pixels from x=0 to x=1
 var xoff = 0.0; // offset x
@@ -93,7 +87,6 @@ function draw() {
     plot = new Plot(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
     */
 
-    plot.setReference(reference);
     plot.update_svg($("svg"));
 
     var ctx=canvas.getContext("2d");
@@ -124,13 +117,14 @@ function update() {
     $("#formula").html('$$y\' = ' + math.parse(expr.replace(/y/g,'y')).toTex() + '$$');
     MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 
-    // var sequence = recurrenceSequence(expr_f, a_0, 100);
     draw();
     point_string = "";
     for (var i=0; i<points.length; ++i) {
       if (i>0) point_string += " ";
       point_string += points[i].x.toFixed(4) + " " + points[i].y.toFixed(4);
     }
+
+    var reference = plot.getReference();
     var params = {
     	"expr": expr,
     	"r": reference.radius.toFixed(3),
@@ -138,19 +132,11 @@ function update() {
       "y": reference.yCenter.toFixed(3),
       "points": point_string
     }
-    var querystring = "";
-    var sep = "";
-    for (key in params) {
-    	querystring += sep + key + "=" + encodeURIComponent(params[key]);
-    	sep = "&";
-    }
-    window.location.hash = querystring
+    setLocationHash(params);
 }
 
 $(function() {
     console.log("ode plot, manu-fatto, https://github.com/paolini/recurrence/")
-
-    plot = new Plot(0, 0, 0, true);
 
     params = get_querystring_params();
 
@@ -158,21 +144,8 @@ $(function() {
         $("#expr").val(params['expr']);
     }
 
-    if (params['r']) reference.radius = parseFloat(params['r']);
-    if (params['x']) reference.xCenter = parseFloat(params['x']);
-    if (params['y']) reference.yCenter = parseFloat(params['y']);
+    plot = newPlotFromParams(params);
 
-    /*
-    if (params['scale'] != undefined) {
-	     scale = parseFloat(params['scale']);
-    }
-    if (params['xoff'] != undefined) {
-	     xoff = parseFloat(params['xoff']);
-    }
-    if (params['yoff'] != undefined) {
-	     yoff = parseFloat(params['yoff']);
-    }
-    */
     if (params['points'] != undefined && params['points'].length>0) {
       var l = params['points'].split(' ');
       points = [];
@@ -228,12 +201,6 @@ $(function() {
     	var factor = 1.04
     	if (delta < 0) factor = 1.0/factor
       plot.zoom(factor, coords.x, coords.y);
-      reference = plot.getReference();
-      /*
-    	scale *= factor
-    	xoff = coords.x + (xoff-coords.x) / factor;
-    	yoff = coords.y + (yoff-coords.y) / factor;
-      */
     	update();
     	return false;
     });

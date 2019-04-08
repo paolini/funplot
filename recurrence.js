@@ -32,19 +32,6 @@ function recurrenceWeb (ctx, plot, sequence) {
     }
 }
 
-function svgGraphPath (plot,func) {
-    var yy, x, dx=4, x0=plot.x0, y0=plot.y0, scale=plot.scale;
-    var iMax = Math.round((ctx.canvas.width-x0)/dx);
-    var iMin = plot.doNegativeX ? Math.round(-x0/dx) : 0;
-    var d = "";
-    for (var i=iMin;i<=iMax;i++) {
-    	x = i*dx/scale;
-    	if (i==iMin) plot.moveTo(ctx, x, func(x));
-    	else         plot.lineTo(ctx, x, func(x));
-    }
-    ctx.stroke();
-}
-
 ////////////////////////
 
 function id(x) {return x;}
@@ -53,10 +40,6 @@ var expr = "cos(x)";
 var compiled_expr;
 var plot;
 var a_0 = 5.0;
-
-var scale = 80.0;                 // 40 pixels from x=0 to x=1
-var xoff = 0.0; // offset x
-var yoff = 0.0; // offset y
 
 function expr_f(x) {
     return compiled_expr.eval({"x": x});
@@ -75,10 +58,6 @@ function draw(sequence) {
     if (null==canvas || !canvas.getContext) return;
 
     var ctx=canvas.getContext("2d");
-    var x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
-    var y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
-    var doNegativeX = true;
-    plot = new Plot(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
 
     plot.update_svg($("svg"));
 
@@ -118,20 +97,15 @@ function update() {
     var sequence = recurrenceSequence(expr_f, a_0, 100);
     draw(sequence);
     fill_table("table", sequence);
+    var reference = plot.getReference();
     var params = {
     	"expr": expr,
-    	"x": a_0,
-    	"scale": scale,
-    	"xoff": xoff,
-    	"yoff": yoff
+    	"a": a_0.toFixed(4),
+      "r": reference.radius.toFixed(3),
+      "x": reference.xCenter.toFixed(3),
+      "y": reference.yCenter.toFixed(3),
     }
-    var querystring = "";
-    var sep = "";
-    for (key in params) {
-    	querystring += sep + key + "=" + encodeURIComponent(params[key]);
-    	sep = "&";
-    }
-    window.location.hash = querystring
+    setLocationHash(params);
 }
 
 $(function() {
@@ -143,21 +117,38 @@ $(function() {
         $("#expr").val(params['expr']);
     }
 
-    if (params['x'] != undefined) {
-	      a_0 = parseFloat(params['x']);
-    }
-
     if (params['scale'] != undefined) {
-	     scale = parseFloat(params['scale']);
-    }
+        // obsolete params
+        // keep for backward compatibility
 
-    if (params['xoff'] != undefined) {
-	     xoff = parseFloat(params['xoff']);
-    }
+        if (params['x'] != undefined) {
+    	      params.a = params['x'];
+        }
 
-    if (params['yoff'] != undefined) {
-	     yoff = parseFloat(params['yoff']);
+        var scale=80;
+        var xoff=0;
+        var yoff=0;
+
+        if (params['scale'] != undefined) {
+    	     scale = parseFloat(params['scale']);
+        }
+
+        if (params['xoff'] != undefined) {
+    	     xoff = parseFloat(params['xoff']);
+        }
+
+        if (params['yoff'] != undefined) {
+    	     yoff = parseFloat(params['yoff']);
+        }
+
+        params.r = "" + (Math.sqrt(320*320 + 240*240) / scale);
+        params.x = "" + xoff;
+        params.y = "" + yoff;
     }
+    if (params['a'] != undefined) {
+        a_0 = parseFloat(params['a']);
+    }
+    plot = newPlotFromParams(params);
 
     $("#expr").keyup(function(event) {
         if (event.keyCode == 13)
@@ -175,9 +166,9 @@ $(function() {
     });
 
     $("#canvas").on("mousedown",function(event) {
-       var coords = plot.mouse_coords(canvas,event);
-    	a_0 = coords.x;
-    	update();
+        var coords = plot.mouse_coords(canvas,event);
+    	  a_0 = coords.x;
+    	  update();
     });
 
     // if mousewheel is moved
@@ -186,9 +177,7 @@ $(function() {
     	// determine the new scale
     	var factor = 1.04
     	if (delta < 0) factor = 1.0/factor
-    	scale *= factor
-    	xoff = coords.x + (xoff-coords.x) / factor;
-    	yoff = coords.y + (yoff-coords.y) / factor;
+      plot.zoom(factor, coords.x, coords.y);
     	update();
     	return false;
     });

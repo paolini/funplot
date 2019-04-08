@@ -10,10 +10,12 @@ function getMousePos(canvas, evt) {
     };
 }
 
-function funGraph (ctx,plot,func) {
+// function plotFunctionGraph(ctx, plot, func) {}
+
+function funGraph(ctx, plot, func) {
     var yy, x, dx=2, x0=plot.x0, y0=plot.y0, scale=plot.scale;
     var iMax = Math.round((ctx.canvas.width-x0)/dx);
-    var iMin = plot.doNegativeX ? Math.round(-x0/dx) : 0;
+    var iMin = Math.round(-x0/dx);
     ctx.beginPath();
 
     for (var i=iMin;i<=iMax;i++) {
@@ -40,7 +42,7 @@ function get_querystring_params() {
   	};
     var query = window.location.hash.substring(1);
     if (query == "") {
-      // be backwarda compatible: previously the querystring was used
+      // be backward compatible: previously the querystring was used
       // now the hash part (which doesn't require reloading)
       query = window.location.search.substring(1);
     }
@@ -49,4 +51,29 @@ function get_querystring_params() {
     	urlParams[decode(match[1])] = decode(match[2]);
     }
     return urlParams;
+}
+
+function newPlotFromParams(params) {
+    var reference = {
+      xCenter: 0.0,
+      yCenter: 0.0,
+      radius: Math.sqrt(320*320 + 240*240) / 80
+    };
+
+    if (params['r']) reference.radius = parseFloat(params['r']);
+    if (params['x']) reference.xCenter = parseFloat(params['x']);
+    if (params['y']) reference.yCenter = parseFloat(params['y']);
+
+    plot = new Plot(reference);
+    return plot;
+}
+
+function setLocationHash(params) {
+    var querystring = "";
+    var sep = "";
+    for (key in params) {
+    	querystring += sep + key + "=" + encodeURIComponent(params[key]);
+    	sep = "&";
+    }
+    window.location.hash = querystring
 }
