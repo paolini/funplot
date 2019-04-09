@@ -45,6 +45,26 @@ function get_querystring_params() {
     return urlParams;
 }
 
+function setCanvasEvents() {
+    $("#canvas").on("mousemove",function(event) {
+      	var coords = plot.mouse_coords(event);
+      	$("#x").html(""+coords.x);
+      	$("#y").html(""+coords.y);
+    });
+
+    // if mousewheel is moved
+    $("#canvas").mousewheel(function(e, delta) {
+      if (!plot) return;
+    	var coords = plot.mouse_coords(e);
+    	// determine the new scale
+    	var factor = 1.04
+    	if (delta < 0) factor = 1.0/factor
+      plot.zoom(factor, coords.x, coords.y);
+    	update();
+    	return false;
+    });
+}
+
 function newPlotFromParams(params) {
     var reference = {
       xCenter: 0.0,

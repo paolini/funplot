@@ -57,6 +57,9 @@ function draw(sequence) {
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
 
+    canvas.height = $("#bottom").offset().top - $("#canvas").offset().top;
+    canvas.width = window.innerWidth - 30;
+
     plot.setCanvas(canvas);
 
     plot.ctx.clearRect ( 0 , 0 , canvas.width, canvas.height );
@@ -137,22 +140,20 @@ $(function() {
     if (params['a'] != undefined) {
         a_0 = parseFloat(params['a']);
     }
-    plot = newPlotFromParams(params);
-
     $("#expr").keyup(function(event) {
         if (event.keyCode == 13)
             update();
     });
 
+    plot = newPlotFromParams(params);
+
     $("#draw").click(function() {
         update();
     });
 
-    $("#canvas").on("mousemove",function(event) {
-      	var coords = plot.mouse_coords(event);
-      	$("#x").html(""+coords.x);
-      	$("#y").html(""+coords.y);
-    });
+    setCanvasEvents();
+
+    $(window).resize(update);
 
     $("#canvas").on("mousedown",function(event) {
         var coords = plot.mouse_coords(event);
@@ -160,17 +161,7 @@ $(function() {
     	  update();
     });
 
-    // if mousewheel is moved
-    $("#canvas").mousewheel(function(e, delta) {
-      if (!plot) return;
-    	var coords = plot.mouse_coords(e);
-    	// determine the new scale
-    	var factor = 1.04
-    	if (delta < 0) factor = 1.0/factor
-      plot.zoom(factor, coords.x, coords.y);
-    	update();
-    	return false;
-    });
+
 
     update();
 });

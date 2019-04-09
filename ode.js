@@ -5,12 +5,6 @@ var draw_slope;
 
 var points = [];
 
-/*
-var scale = 80.0;                 // 40 pixels from x=0 to x=1
-var xoff = 0.0; // offset x
-var yoff = 0.0; // offset y
-*/
-
 function slopeGraph(plot, fun) {
   var xmin = plot.x_pixel(0);
   var ymin = plot.y_pixel(plot.height);
@@ -61,31 +55,10 @@ function draw() {
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
 
-    plot.setCanvas(canvas);
-
-    /*
-    var x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
-    var y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
-    x0 -= xoff*scale;
-    y0 += yoff*scale;
-    plot = new Plot(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
-
-    (x - x0)/this.scale   // logical coord
-
-    var xCenter = x0-xoff*scale + canvas.width / scale;
-    var yCenter = yoff + canvas.height / scale;
     canvas.height = $("#bottom").offset().top - $("#canvas").offset().top;
-    scale *= window.innerWidth / canvas.width;
-    canvas.width = window.innerWidth;
-    xoff = xCenter - canvas.width / scale;
-    yoff = yCenter - canvas.height / scale;
-    */
+    canvas.width = window.innerWidth - 10;
 
-    /*
-    x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
-    y0 = .5 + .5*canvas.height; // y0 pixels from top to y=0
-    plot = new Plot(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
-    */
+    plot.setCanvas(canvas);
 
     plot.ctx.clearRect (0 ,0 , canvas.width, canvas.height);
     plot.show();
@@ -174,14 +147,6 @@ $(function() {
       update();
     });
 
-    $("#canvas").on("mousemove",function(event) {
-      if (plot) {
-      	var coords = plot.mouse_coords(event);
-      	$("#x").html(""+coords.x.toFixed(4));
-      	$("#y").html(""+coords.y.toFixed(4));
-      }
-    });
-
     $("#canvas").on("mousedown",function(event) {
       if (plot) {
        var coords = plot.mouse_coords(event);
@@ -190,19 +155,9 @@ $(function() {
      }
     });
 
-    // if mousewheel is moved
-    $("#canvas").mousewheel(function(e, delta) {
-      if (!plot) return;
-    	var coords = plot.mouse_coords(e);
-    	// determine the new scale
-    	var factor = 1.04
-    	if (delta < 0) factor = 1.0/factor
-      plot.zoom(factor, coords.x, coords.y);
-    	update();
-    	return false;
-    });
+    setCanvasEvents();
 
-    // $(window).resize(update);
+    $(window).resize(update);
 
     update();
 });

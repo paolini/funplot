@@ -11,4 +11,4 @@ canvas {
     border: 1px;
 }
 
-#bottom { position: fixed; bottom: 0; }
+#bottom { position: fixed; bottom: 0; right: 0;}
