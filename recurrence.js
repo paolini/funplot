@@ -10,24 +10,24 @@ function recurrenceSequence(func, x, n) {
     return r;
 }
 
-function recurrenceWeb (ctx, plot, sequence) {
-    ctx.strokeStyle = "rgb(0,0,0)";
-    ctx.beginPath();
-    plot.moveTo(ctx, sequence[0], 0);
+function recurrenceWeb (plot, sequence) {
+    plot.ctx.strokeStyle = "rgb(0,0,0)";
+    plot.ctx.beginPath();
+    plot.moveTo(sequence[0], 0);
     for (var i=0; i<sequence.length-1; ++i) {
     	var x = sequence[i];
     	var y = sequence[i+1]
     	if (Math.abs(y) > 10E4) break;
-    	plot.lineTo(ctx, x, y);
-    	plot.lineTo(ctx, y, y);
-        }
-        ctx.stroke()
-        ctx.strokeStyle = "rgb(255,0,0)";
-        ctx.fillStyle = "rgb(50,50,50)";
-        for (var i=0; i<sequence.length; ++i) {
-    	plot.drawPoint(ctx, sequence[i], 0);
+    	plot.lineTo(x, y);
+    	plot.lineTo(y, y);
+    }
+    plot.ctx.stroke()
+    plot.ctx.strokeStyle = "rgb(255,0,0)";
+    plot.ctx.fillStyle = "rgb(50,50,50)";
+    for (var i=0; i<sequence.length; ++i) {
+    	plot.drawPoint(sequence[i], 0);
     	if (i<10) {
-    	    plot.drawText(ctx, sequence[i], 0, i+1);
+    	    plot.drawText(sequence[i], 0, i+1);
     	}
     }
 }
@@ -57,30 +57,19 @@ function draw(sequence) {
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
 
-    var ctx=canvas.getContext("2d");
+    plot.setCanvas(canvas);
 
-    plot.update_svg($("svg"));
-
-    ctx.clearRect ( 0 , 0 , canvas.width, canvas.height );
-    plot.show(ctx);
-    ctx.strokeStyle = "rgb(66,44,255)";
-    ctx.lineWidth = 2;
-    funGraph(ctx, plot, expr_f);
-    ctx.strokeStyle = "rgb(200,200,0)";
-    funGraph(ctx, plot, id);
-    ctx.strokeStyle = "rgb(0,0,0)";
-    ctx.lineWidth = 1;
-    recurrenceWeb(ctx, plot, sequence);
+    plot.ctx.clearRect ( 0 , 0 , canvas.width, canvas.height );
+    plot.show();
+    plot.ctx.strokeStyle = "rgb(66,44,255)";
+    plot.ctx.lineWidth = 2;
+    funGraph(plot, expr_f);
+    plot.ctx.strokeStyle = "rgb(200,200,0)";
+    funGraph(plot, id);
+    plot.ctx.strokeStyle = "rgb(0,0,0)";
+    plot.ctx.lineWidth = 1;
+    recurrenceWeb(plot, sequence);
 }
-
-function get_circle() {
-    var circle = new_svg_elem("circle");
-    circle.attr("cx",100);
-    circle.attr("cy",100);
-    circle.attr("r",50);
-    circle.attr("style","stroke:blue;fill:none");
-    return circle;
-  }
 
 function update() {
     $("#a0").html(""+a_0);
@@ -160,20 +149,21 @@ $(function() {
     });
 
     $("#canvas").on("mousemove",function(event) {
-      	var coords = plot.mouse_coords(canvas,event);
+      	var coords = plot.mouse_coords(event);
       	$("#x").html(""+coords.x);
       	$("#y").html(""+coords.y);
     });
 
     $("#canvas").on("mousedown",function(event) {
-        var coords = plot.mouse_coords(canvas,event);
+        var coords = plot.mouse_coords(event);
     	  a_0 = coords.x;
     	  update();
     });
 
     // if mousewheel is moved
     $("#canvas").mousewheel(function(e, delta) {
-    	var coords = plot.mouse_coords(canvas, e);
+      if (!plot) return;
+    	var coords = plot.mouse_coords(e);
     	// determine the new scale
     	var factor = 1.04
     	if (delta < 0) factor = 1.0/factor

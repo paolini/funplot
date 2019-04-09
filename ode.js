@@ -11,10 +11,10 @@ var xoff = 0.0; // offset x
 var yoff = 0.0; // offset y
 */
 
-function slopeGraph(ctx, plot, fun) {
+function slopeGraph(plot, fun) {
   var xmin = plot.x_pixel(0);
-  var ymin = plot.y_pixel(ctx.canvas.height);
-  var xmax = plot.x_pixel(ctx.canvas.width);
+  var ymin = plot.y_pixel(plot.height);
+  var xmax = plot.x_pixel(plot.width);
   var ymax = plot.y_pixel(0);
   var dx = (xmax - xmin)/20;
   var dy = dx;
@@ -24,26 +24,26 @@ function slopeGraph(ctx, plot, fun) {
     for (var y=ymin; y < ymax; y+=dy) {
         var m = fun(x,y);
         var s = h/Math.sqrt(1.0 + m*m) ;
-        ctx.beginPath();
-        plot.moveTo(ctx, x, y);
-        plot.lineTo(ctx, x + s, y + s*m);
-        ctx.stroke();
+        plot.ctx.beginPath();
+        plot.moveTo(x, y);
+        plot.lineTo(x + s, y + s*m);
+        plot.ctx.stroke();
     }
   }
 }
 
-function odePlot(ctx, plot, fun, x0, y0) {
+function odePlot(plot, fun, x0, y0) {
   var xmin = plot.x_pixel(0);
-  var ymin = plot.y_pixel(ctx.canvas.height);
-  var xmax = plot.x_pixel(ctx.canvas.width);
+  var ymin = plot.y_pixel(plot.height);
+  var xmax = plot.x_pixel(plot.width);
   var ymax = plot.y_pixel(0);
 
   for (dir=1;dir>=-1;dir-=2) {
     var dt = (xmax-xmin)/1000.0;
     var x = x0;
     var y = y0;
-    ctx.beginPath();
-    plot.moveTo(ctx, x, y);
+    plot.ctx.beginPath();
+    plot.moveTo(x, y);
     for (;x<=xmax && x>=xmin && y<=ymax && y>=ymin;) {
       var m = fun(x,y);
       var r = dir * Math.sqrt(1.0 + m*m);
@@ -51,9 +51,9 @@ function odePlot(ctx, plot, fun, x0, y0) {
       var dy = dt * m / r;
       x += dx;
       y += dy;
-      plot.lineTo(ctx, x, y);
+      plot.lineTo(x, y);
     }
-    ctx.stroke();
+    plot.ctx.stroke();
   }
 }
 
@@ -61,7 +61,7 @@ function draw() {
     var canvas = $("#canvas")[0];
     if (null==canvas || !canvas.getContext) return;
 
-    var x0, y0;
+    plot.setCanvas(canvas);
 
     /*
     var x0 = .5 + .5*canvas.width;  // x0 pixels from left to x=0
@@ -87,18 +87,15 @@ function draw() {
     plot = new Plot(x0-xoff*scale, y0+yoff*scale, scale, doNegativeX);
     */
 
-    plot.update_svg($("svg"));
-
-    var ctx=canvas.getContext("2d");
-    ctx.clearRect (0 ,0 , canvas.width, canvas.height);
-    plot.show(ctx);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgb(200,200,0)";
-    if (draw_slope) slopeGraph(ctx, plot, expr_f);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgb(66,44,255)";
+    plot.ctx.clearRect (0 ,0 , canvas.width, canvas.height);
+    plot.show();
+    plot.ctx.lineWidth = 2;
+    plot.ctx.strokeStyle = "rgb(200,200,0)";
+    if (draw_slope) slopeGraph(plot, expr_f);
+    plot.ctx.lineWidth = 1;
+    plot.ctx.strokeStyle = "rgb(66,44,255)";
     for (var i=0; i<points.length; ++i) {
-        odePlot(ctx, plot, expr_f, points[i].x, points[i].y);
+        odePlot(plot, expr_f, points[i].x, points[i].y);
     }
 }
 
@@ -179,7 +176,7 @@ $(function() {
 
     $("#canvas").on("mousemove",function(event) {
       if (plot) {
-      	var coords = plot.mouse_coords(canvas,event);
+      	var coords = plot.mouse_coords(event);
       	$("#x").html(""+coords.x.toFixed(4));
       	$("#y").html(""+coords.y.toFixed(4));
       }
@@ -187,7 +184,7 @@ $(function() {
 
     $("#canvas").on("mousedown",function(event) {
       if (plot) {
-       var coords = plot.mouse_coords(canvas,event);
+       var coords = plot.mouse_coords(event);
        points.push(coords);
     	 update();
      }
@@ -196,7 +193,7 @@ $(function() {
     // if mousewheel is moved
     $("#canvas").mousewheel(function(e, delta) {
       if (!plot) return;
-    	var coords = plot.mouse_coords(canvas, e);
+    	var coords = plot.mouse_coords(e);
     	// determine the new scale
     	var factor = 1.04
     	if (delta < 0) factor = 1.0/factor

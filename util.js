@@ -2,33 +2,25 @@ function new_svg_elem(elem) {
     return $(document.createElementNS('http://www.w3.org/2000/svg', elem));
 }
 
-function getMousePos(canvas, evt) {
-    var rect = canvas.getBoundingClientRect();
-    return {
-    	x: evt.clientX - rect.left,
-    	y: evt.clientY - rect.top
-    };
-}
-
 // function plotFunctionGraph(ctx, plot, func) {}
 
-function funGraph(ctx, plot, func) {
+function funGraph(plot, func) {
     var yy, x, dx=2, x0=plot.x0, y0=plot.y0, scale=plot.scale;
-    var iMax = Math.round((ctx.canvas.width-x0)/dx);
+    var iMax = Math.round((plot.width-x0)/dx);
     var iMin = Math.round(-x0/dx);
-    ctx.beginPath();
+    plot.ctx.beginPath();
 
     for (var i=iMin;i<=iMax;i++) {
       	x = i*dx/scale;
       	var y = func(x);
       	if (i==iMin || Math.abs(y-yy)>dx*100) {
-      	    plot.moveTo(ctx, x, func(x));
+      	    plot.moveTo(x, func(x));
       	} else {
-            plot.lineTo(ctx, x, func(x));
+            plot.lineTo(x, func(x));
 	      }
       	yy = y;
     }
-    ctx.stroke();
+    plot.ctx.stroke();
 }
 
 function get_querystring_params() {
