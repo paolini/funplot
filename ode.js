@@ -13,18 +13,18 @@ function slopeGraph(plot, fx, fy) {
   var ymin = plot.y_pixel(plot.height);
   var xmax = plot.x_pixel(plot.width);
   var ymax = plot.y_pixel(0);
-  var dx = (xmax - xmin)/20;
-  var dy = dx;
-  var h = 0.3 * dx;
+  var gridx = (xmax - xmin)/20;
+  var gridy = gridx;
+  var h = 0.3 * gridx;
 
-  for (var x=xmin; x < xmax; x+=dx) {
-    for (var y=ymin; y < ymax; y+=dy) {
+  for (var x=xmin; x < xmax; x+=gridx) {
+    for (var y=ymin; y < ymax; y+=gridy) {
         var dx = fx(x, y);
         var dy = fy(x, y);
-        var s = Math.sqrt(dx*dx + dy*dy);
+        var s = h/Math.sqrt(dx*dx + dy*dy);
         plot.ctx.beginPath();
         plot.moveTo(x, y);
-        plot.lineTo(x + dx/s, y + dy/s);
+        plot.lineTo(x + s*dx, y + s*dy);
         plot.ctx.stroke();
     }
   }
