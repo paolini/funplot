@@ -14,7 +14,18 @@
 <h1>ODE plot</h1>
 <h2>y'(x) = f(x,y(x))</h2>
 
-Function: y'(x) = <input id="expr" value="y^2+x"><input id="draw" type="submit" value="set">x=<span id="x">?</span>, y=<span id="y">?</span><br />
+<select id="select">
+  <option value="system">system:</option>
+  <option value="equation">equation:</option>
+</select>
+<div class="equation">
+  y'(x) = <input id="expr" class="expr" value="y^2+x">
+</div>
+<div class="system">
+  x'(t) = <input id="expr_x" class="expr" value="y"> <br />
+  y'(t) = <input id="expr_y" class="expr" value="-sin(x)-y"> <br />
+</div>
+<input id="draw" type="submit" value="set">x=<span id="x">?</span>, y=<span id="y">?</span><br />
 <input id="draw_slope" type="checkbox">draw slope field
 <button id="clear_button">clear integral lines</button>
 <p id="formula">...</p>
