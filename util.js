@@ -81,11 +81,11 @@ function newPlotFromParams(params) {
 }
 
 function setLocationHash(params) {
-    var querystring = "";
+    var hash = "#";
     var sep = "";
     for (key in params) {
-    	querystring += sep + key + "=" + encodeURIComponent(params[key]);
+    	hash += sep + key + "=" + encodeURIComponent(params[key]);
     	sep = "&";
     }
-    window.location.hash = querystring
+    history.replaceState(undefined, undefined, hash);
 }
