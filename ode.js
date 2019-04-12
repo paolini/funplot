@@ -47,6 +47,10 @@ function odePlot(plot, fx, fy, x0, y0) {
       var dx = fx(x, y);
       var dy = fy(x, y);
       var r = dir * dt / Math.sqrt(dx*dx + dy*dy);
+      xx = x + r * dx;
+      yy = y + r * dy;
+      dx = 0.5 * (dx + fx(xx,yy));
+      dy = 0.5 * (dy + fy(xx,yy));
       x += r * dx;
       y += r * dy;
       plot.lineTo(x, y);
