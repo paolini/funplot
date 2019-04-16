@@ -13,12 +13,12 @@ function slopeGraph(plot, fx, fy) {
   var ymin = plot.y_pixel(plot.height);
   var xmax = plot.x_pixel(plot.width);
   var ymax = plot.y_pixel(0);
-  var gridx = (xmax - xmin)/20;
+  var gridx = (xmax - xmin)/40;
   var gridy = gridx;
   var h = 0.3 * gridx;
 
-  for (var x=xmin; x < xmax; x+=gridx) {
-    for (var y=ymin; y < ymax; y+=gridy) {
+  for (var x=xmin + 0.5*gridx; x < xmax; x+=gridx) {
+    for (var y=ymin + 0.5*gridy; y < ymax; y+=gridy) {
         var dx = fx(x, y);
         var dy = fy(x, y);
         var s = h/Math.sqrt(dx*dx + dy*dy);
@@ -132,6 +132,9 @@ function update() {
       "y": reference.yCenter.toFixed(3),
       "points": point_string
     }
+    if (draw_slope) {
+      params.slope = 1;
+    }
     if (system) {
       params.fx = expr_x;
       params.fy = expr_y;
@@ -205,7 +208,12 @@ $(function() {
       update();
     });
 
-    draw_slope = $("#draw_slope").is(":checked");
+    if (params['slope']=="1") {
+        draw_slope = true;
+    } else {
+        draw_slope = false;
+    }
+    $("#draw_slope").prop('checked', draw_slope);
     $("#draw_slope").change(function() {
       draw_slope = $("#draw_slope").is(":checked");
       update();
@@ -223,5 +231,5 @@ $(function() {
 
     $(window).resize(update);
 
-    // update();
+    update();
 });
