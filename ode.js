@@ -79,7 +79,7 @@ function draw() {
     plot.setCanvas(canvas);
 
     plot.ctx.clearRect (0 ,0 , canvas.width, canvas.height);
-    plot.show();
+    plot.drawAxes();
     plot.ctx.lineWidth = 2;
     plot.ctx.strokeStyle = "rgb(200,200,0)";
     if (draw_slope)

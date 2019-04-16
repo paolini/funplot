@@ -52,7 +52,8 @@ Plot.prototype.getReference = function() {
     };
 }
 
-Plot.prototype.show = function() {
+
+Plot.prototype.drawAxes = function() {
     var w = this.width;
     var h = this.height;
     this.ctx.beginPath();
@@ -60,6 +61,48 @@ Plot.prototype.show = function() {
     this.ctx.moveTo(0,this.y0); plot.ctx.lineTo(w,this.y0);  // X axis
     this.ctx.moveTo(this.x0,0); plot.ctx.lineTo(this.x0,h);  // Y axis
     this.ctx.stroke();
+
+    // draw rulers
+    var k = 2.0; //minimum number of ticks along the semidiagonal
+    var pow = Math.floor(Math.log(this.radius/k) / Math.log(10.0));
+    var dx = Math.pow(10.0,pow);
+
+    this.ctx.font = "10px Arial"
+
+    function round(x) {
+      return math.format(x, {precision: 14});
+    }
+
+    var pixel_y
+    var pixel_x;
+    pixel_y = this.pixel_y(0);
+    this.ctx.textAlign = "center"
+    for (var i = Math.floor(this.x_pixel(0)/dx*10)+1; i<this.x_pixel(this.width)/dx*10; i++) {
+      if (i==0) continue;
+      pixel_x = this.pixel_x(i*dx/10);
+      this.ctx.beginPath();
+      this.ctx.moveTo(pixel_x,pixel_y);
+      this.ctx.lineTo(pixel_x,pixel_y - (i%10==0 ? 6 : (i%5 == 0) ? 4:2));
+      this.ctx.stroke();
+      if (i%10 == 0) {
+        this.ctx.fillText(round(i*dx/10), pixel_x, pixel_y+10.0);
+      }
+    }
+
+    pixel_x = this.pixel_x(0);
+    this.ctx.textAlign = "right"
+    for (var i = Math.floor(this.y_pixel(this.height)/dx*10)+1; i<this.y_pixel(0)/dx*10; i++) {
+      if (i==0) continue;
+      pixel_y = this.pixel_y(i*dx/10);
+      this.ctx.beginPath();
+      this.ctx.moveTo(pixel_x,pixel_y);
+      this.ctx.lineTo(pixel_x + (i%10==0 ? 6 : (i%5 == 0) ? 4:2), pixel_y);
+      this.ctx.stroke();
+      if (i%10 == 0) {
+        // ugly hack to get (hopefully!) correct digits
+        this.ctx.fillText(round(i*dx/10), pixel_x-2, pixel_y+3);
+      }
+    }
 };
 
 Plot.prototype.pixel_x = function(x) {

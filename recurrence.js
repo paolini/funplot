@@ -63,7 +63,7 @@ function draw(sequence) {
     plot.setCanvas(canvas);
 
     plot.ctx.clearRect ( 0 , 0 , canvas.width, canvas.height );
-    plot.show();
+    plot.drawAxes();
     plot.ctx.strokeStyle = "rgb(66,44,255)";
     plot.ctx.lineWidth = 2;
     funGraph(plot, expr_f);
