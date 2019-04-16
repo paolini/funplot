@@ -42,7 +42,8 @@ function odePlot(plot, fx, fy, x0, y0, options) {
   const dt = plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
   //const dt = plot.radius/plot.width;
   var arrow_step = 80;
-  const draw_arrows = options && options.draw_arrows;
+  const draw_arrows = options &&  options.draw_arrows;
+  const equation = options && options.equation;
 
   for (dir=1;dir>=-1;dir-=2) {
     var maxstep = plot.width;
@@ -50,11 +51,11 @@ function odePlot(plot, fx, fy, x0, y0, options) {
     var y = y0;
     plot.ctx.beginPath();
     plot.moveTo(x, y);
-    for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && step < maxstep; step++) {
+    for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && (step < maxstep || equation); step++) {
       var dx = fx(x, y);
       var dy = fy(x, y);
       var l = dt / Math.sqrt(dx*dx + dy*dy);
-      if (l>2) break;
+      if (l>2 && !equation) break;
       var r = dir * l;
       xx = x + r * dx;
       yy = y + r * dy;
@@ -100,7 +101,7 @@ function draw() {
         slopeGraph(plot, fx, fy);
     plot.ctx.lineWidth = 1;
     plot.ctx.strokeStyle = "rgb(66,44,255)";
-    options = {draw_arrows: system};
+    options = {draw_arrows: system, equation: !system};
     for (var i=0; i<points.length; ++i) {
         odePlot(plot, fx, fy, points[i].x, points[i].y, options);
     }
