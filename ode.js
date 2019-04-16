@@ -5,6 +5,7 @@ var system = true;
 var compiled_expr, compiled_expr_x, compiled_expr_y;
 var plot;
 var draw_slope;
+var draw_arrows=true;
 
 var points = [];
 
@@ -24,20 +25,26 @@ function slopeGraph(plot, fx, fy) {
         var s = h/Math.sqrt(dx*dx + dy*dy);
         plot.ctx.beginPath();
         plot.moveTo(x, y);
-        plot.lineTo(x + s*dx, y + s*dy);
+        var xx = x + s*dx;
+        var yy = y + s*dy;
+        plot.lineTo(xx, yy);
         plot.ctx.stroke();
+        if (draw_arrows) plot.drawArrowHead(xx,yy, dx,dy);
     }
   }
 }
 
-function odePlot(plot, fx, fy, x0, y0) {
+function odePlot(plot, fx, fy, x0, y0, options) {
   var xmin = plot.x_pixel(0);
   var ymin = plot.y_pixel(plot.height);
   var xmax = plot.x_pixel(plot.width);
   var ymax = plot.y_pixel(0);
+  const dt = plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
+  //const dt = plot.radius/plot.width;
+  var arrow_step = 80;
+  const draw_arrows = options && options.draw_arrows;
 
   for (dir=1;dir>=-1;dir-=2) {
-    var dt = (xmax-xmin)/plot.width;
     var maxstep = plot.width;
     var x = x0;
     var y = y0;
@@ -46,7 +53,9 @@ function odePlot(plot, fx, fy, x0, y0) {
     for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && step < maxstep; step++) {
       var dx = fx(x, y);
       var dy = fy(x, y);
-      var r = dir * dt / Math.sqrt(dx*dx + dy*dy);
+      var l = dt / Math.sqrt(dx*dx + dy*dy);
+      if (l>2) break;
+      var r = dir * l;
       xx = x + r * dx;
       yy = y + r * dy;
       dx = 0.5 * (dx + fx(xx,yy));
@@ -54,6 +63,11 @@ function odePlot(plot, fx, fy, x0, y0) {
       x += r * dx;
       y += r * dy;
       plot.lineTo(x, y);
+      if (draw_arrows && step % (2*arrow_step) == arrow_step) {
+        plot.ctx.stroke();
+        plot.drawArrowHead(x,y,dx,dy);
+        plot.ctx.beginPath();
+      }
     }
     plot.ctx.stroke();
   }
@@ -86,8 +100,9 @@ function draw() {
         slopeGraph(plot, fx, fy);
     plot.ctx.lineWidth = 1;
     plot.ctx.strokeStyle = "rgb(66,44,255)";
+    options = {draw_arrows: system};
     for (var i=0; i<points.length; ++i) {
-        odePlot(plot, fx, fy, points[i].x, points[i].y);
+        odePlot(plot, fx, fy, points[i].x, points[i].y, options);
     }
 }
 

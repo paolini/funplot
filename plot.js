@@ -139,6 +139,20 @@ Plot.prototype.drawText = function(x, y, text) {
     this.ctx.fillText(text, this.pixel_x(x)-2, this.pixel_y(y)+10);
 }
 
+Plot.prototype.drawArrowHead = function(x, y, dx, dy) {
+  var s = Math.sqrt(dx*dx+dy*dy);
+  dx /= s;
+  dy /= -s;
+  var r = 7.0;
+  x = this.pixel_x(x);
+  y = this.pixel_y(y);
+  this.ctx.beginPath();
+  this.ctx.moveTo(x - r*dx - 0.3*r*dy, y - r*dy + 0.3 * r * dx);
+  this.ctx.lineTo(x, y);
+  this.ctx.lineTo(x - r*dx + 0.3*r*dy, y - r*dy - 0.3 * r * dx);
+  this.ctx.stroke();
+}
+
 function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
     return {
