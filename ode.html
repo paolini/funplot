@@ -8,6 +8,7 @@
 <script src="http://cdnjs.cloudflare.com/ajax/libs/mathjax/2.3/MathJax.js?config=TeX-AMS-MML_HTMLorMML.js"></script>
 <script src="math.js"></script>
 <script src="jquery.mousewheel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js" integrity="sha384-NaWTHo/8YCBYJ59830LTz/P4aQZK1sS0SneOgAvhsIl3zBu8r9RevNg5lHCHAuQ/" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="index.css">
 </head>
 <body>
@@ -32,7 +33,10 @@ x=<span id="x">?</span>, y=<span id="y">?</span><br />
 
 <canvas id="canvas" width="640" height="480"></canvas>
 
-<p id="bottom">Source on <a href='https://github.com/paolini/recurrence/'>github</a>
+<p id="bottom">
+  <button id="pdf_button">PDF export</button>
+  Source on <a href='https://github.com/paolini/recurrence/'>github</a>
+<script src="pdfctx.js"></script>
 <script src="plot.js"></script>
 <script src="util.js"></script>
 <script type="text/javascript" src="ode.js"></script>

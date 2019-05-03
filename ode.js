@@ -49,6 +49,7 @@ function odePlot(plot, fx, fy, x0, y0, options) {
     var maxstep = plot.width;
     var x = x0;
     var y = y0;
+    var arrows = [];
     plot.ctx.beginPath();
     plot.moveTo(x, y);
     for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && (step < maxstep || equation); step++) {
@@ -65,22 +66,17 @@ function odePlot(plot, fx, fy, x0, y0, options) {
       y += r * dy;
       plot.lineTo(x, y);
       if (draw_arrows && step % (2*arrow_step) == arrow_step) {
-        plot.ctx.stroke();
-        plot.drawArrowHead(x,y,dx,dy);
-        plot.ctx.beginPath();
+        arrows.push([x, y, dx, dy]);
       }
     }
     plot.ctx.stroke();
+    for (var i=0; i<arrows.length; ++i) {
+      plot.drawArrowHead(arrows[i][0], arrows[i][1], arrows[i][2], arrows[i][3]);
+    }
   }
 }
 
 function draw() {
-    var canvas = $("#canvas")[0];
-    if (null==canvas || !canvas.getContext) return;
-
-    canvas.height = $("#bottom").offset().top - $("#canvas").offset().top;
-    canvas.width = window.innerWidth - 10;
-
     var fx, fy;
 
     if (system) {
@@ -91,7 +87,6 @@ function draw() {
       fy = function (x, y) { return compiled_expr.eval({'x': x, 'y': y});}
     }
 
-    plot.setCanvas(canvas);
 
     plot.ctx.clearRect (0 ,0 , canvas.width, canvas.height);
     plot.drawAxes();
@@ -105,6 +100,31 @@ function draw() {
     for (var i=0; i<points.length; ++i) {
         odePlot(plot, fx, fy, points[i].x, points[i].y, options);
     }
+}
+
+function draw_to_canvas() {
+  var canvas = $("#canvas")[0];
+  if (null==canvas || !canvas.getContext) return;
+
+  canvas.height = $("#bottom").offset().top - $("#canvas").offset().top;
+  canvas.width = window.innerWidth - 10;
+
+  plot.setCanvas(canvas);
+
+  draw();
+}
+
+function draw_to_pdf() {
+  var canvas = $("#canvas")[0];
+  if (null==canvas || !canvas.getContext) return;
+
+  plot.setPdf(canvas.width/10, canvas.height/10);
+
+  draw();
+
+  plot.ctx.save("out.pdf")
+
+  plot.setCanvas(canvas);
 }
 
 function update() {
@@ -134,7 +154,7 @@ function update() {
     }
     MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 
-    draw();
+    draw_to_canvas();
     point_string = "";
     for (var i=0; i<points.length; ++i) {
       if (i>0) point_string += " ";
@@ -222,6 +242,10 @@ $(function() {
     $("#clear_button").click(function() {
       points = [];
       update();
+    });
+
+    $("#pdf_button").click(function() {
+      draw_to_pdf();
     });
 
     if (params['slope']=="1") {

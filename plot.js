@@ -13,16 +13,25 @@ function Plot(options) {
     this.ctx = null;
 }
 
-Plot.prototype.setCanvas = function(canvas) {
-  this.width = canvas.width;
-  this.height = canvas.height;
-  this.ctx = canvas.getContext("2d");
+Plot.prototype.resize = function(width, height) {
+  this.width = width;
+  this.height = height;
 
   var w = this.width/2;
   var h = this.height/2;
   this.scale = Math.sqrt(w*w + h*h) / this.radius;
   this.x0 = w - this.xCenter * this.scale;
   this.y0 = h + this.yCenter * this.scale;
+}
+
+Plot.prototype.setCanvas = function(canvas) {
+  this.ctx = canvas.getContext("2d");
+  this.resize(canvas.width, canvas.height);
+}
+
+Plot.prototype.setPdf = function(width, height) {
+  this.ctx = new PdfCtx(6*width, 6*height);
+  this.resize(6*width, 6*height);
 }
 
 Plot.prototype.zoom = function(factor, x, y) {
