@@ -155,17 +155,22 @@ function update() {
     MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 
     draw_to_canvas();
+
+    function round(x) {
+      return math.format(x, {precision: 3});
+    }
+
     point_string = "";
     for (var i=0; i<points.length; ++i) {
-      if (i>0) point_string += " ";
-      point_string += points[i].x.toFixed(4) + " " + points[i].y.toFixed(4);
+      if (i>0) point_string += "_";
+      point_string += "" + round(points[i].x) + "_" + round(points[i].y);
     }
 
     var reference = plot.getReference();
     var params = {
-    	"r": reference.radius.toFixed(3),
-      "x": reference.xCenter.toFixed(3),
-      "y": reference.yCenter.toFixed(3),
+    	"r": round(reference.radius),
+      "x": round(reference.xCenter),
+      "y": round(reference.yCenter),
       "points": point_string
     }
     if (draw_slope) {
@@ -199,7 +204,9 @@ $(function() {
     plot = newPlotFromParams(params);
 
     if (params['points'] != undefined && params['points'].length>0) {
-      var l = params['points'].split(' ');
+      var separator = '_';
+      if (params['points'].includes(" ")) separator = ' ';  // for backward compatibility
+      var l = params['points'].split('_');
       points = [];
       for (var i=0; i<l.length/2; ++i) {
         points.push({
