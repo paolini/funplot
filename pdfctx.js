@@ -8,7 +8,7 @@ function PdfCtx(width, height) {
   this.doc = doc;
   this.ctx = doc.context2d;
   this.ctx.autoPaging = false;
-  this.ctx.lineWidth = 0.1;
+  this.ctx.lineWidth = 1.0;
   this.ctx.translate(5,5);
   this.ctx.scale(1.0,1.0);
   // doc.save("test.pdf")
