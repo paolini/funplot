@@ -1,5 +1,9 @@
 function PdfCtx(width, height) {
-  var doc = new jsPDF({unit: 'pt', format: [width+10, height+10], orientation: (height > width ? 'p' : 'l') });
+  var margin = 10;
+  var doc = new jsPDF({
+    unit: 'pt',
+    format: [width+2*margin, height+2*margin],
+    orientation: (height > width ? 'p' : 'l') });
 
 //  doc.line(20, 20, 60, 20) // horizontal line
 
@@ -7,9 +11,9 @@ function PdfCtx(width, height) {
   //doc.setLineWidth(0.5)
   this.doc = doc;
   this.ctx = doc.context2d;
-  this.ctx.autoPaging = false;
-  this.ctx.lineWidth = 1.0;
-  this.ctx.translate(5,5);
+  this.ctx.autoPaging = 'false';
+  this.ctx.lineWidth = 2.0;
+  this.ctx.translate(margin,margin);
   this.ctx.scale(1.0,1.0);
   // doc.save("test.pdf")
 }
