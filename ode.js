@@ -5,7 +5,7 @@ var system = true;
 var compiled_expr, compiled_expr_x, compiled_expr_y;
 var plot;
 var draw_slope;
-var draw_arrows=true;
+var draw_arrows = true;
 
 var points = [];
 
@@ -139,8 +139,8 @@ function update() {
         return;
       }
       $("#formula").html('$$\\begin{cases}'
-      + 'x\' = ' + math.parse(expr_x) + '\\\\'
-      + 'y\' = ' + math.parse(expr_y)
+      + 'x\' = ' + math.parse(expr_x).toTex() + '\\\\'
+      + 'y\' = ' + math.parse(expr_y).toTex()
       + '\\end{cases}$$');
     } else { // equation
       expr = $("#expr").val();
