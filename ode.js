@@ -1,3 +1,45 @@
+const odePanel = {
+  data: function() {
+    return {
+      expr: "",
+      expr_x: "",
+      expr_y: "",
+      x: "?",
+      y: "?",
+      compiled_expr: null,
+      compiled_expr_x: null,
+      compiled_expr_y: null,
+      draw_slope: false,
+      draw_arrows: true,
+      points: [] }
+  },
+  props: {system: true},
+  methods: {
+    update: function() {
+
+    }
+  },
+  created() {
+  },
+  template:
+    '<div class="odepanel">' +
+    '<button @click="update">update</button>' +
+    '<input v-model="draw_slope" type="checkbox">draw slope field' +
+    '<button @click="clear">clear integral lines</button>' +
+    '<div v-if="system">' +
+    '  x\'(x,y) = <input id="expr_x" class="expr" value="y"> <br /> ' +
+    '  y\'(x,y) = <input id="expr_y" class="expr" value="-sin(x)-y"> ' +
+    '</div>' +
+    '<div v-else>' +
+    '  y\'(x) = <input id="expr" class="expr" value="y^2+x">' +
+    '</div>' +
+    '<p id="formula">...</p>' +
+    '</div>'
+}
+
+Vue.component("odePanel", odePanel);
+const OdePanel = Vue.extend(odePanel);
+
 var expr = "";
 var expr_x = "";
 var expr_y = "";
@@ -88,8 +130,6 @@ function draw() {
     }
 
 
-    plot.ctx.clearRect (0 ,0 , canvas.width, canvas.height);
-    plot.drawAxes();
     plot.ctx.lineWidth = 2;
     plot.ctx.strokeStyle = "rgb(200,200,0)";
     if (draw_slope)
@@ -103,15 +143,6 @@ function draw() {
 }
 
 function draw_to_canvas() {
-  var canvas = $("#canvas")[0];
-  if (null==canvas || !canvas.getContext) return;
-
-  canvas.height = $("#bottom").offset().top - $("#canvas").offset().top;
-  canvas.width = window.innerWidth - 10;
-
-  plot.setCanvas(canvas);
-
-  draw();
 }
 
 function draw_to_pdf() {
@@ -185,7 +216,7 @@ function update() {
     setLocationHash(params);
 }
 
-$(function() {
+function ode_init() {
     console.log("ode plot, manu-fatto, https://github.com/paolini/recurrence/")
 
     params = get_querystring_params();
@@ -279,4 +310,4 @@ $(function() {
     $(window).resize(update);
 
     update();
-});
+}

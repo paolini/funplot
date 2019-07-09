@@ -61,14 +61,17 @@ Plot.prototype.getReference = function() {
     };
 }
 
+Plot.prototype.clear = function() {
+  this.ctx.clearRect (0 ,0 , this.width, this.height);
+}
 
 Plot.prototype.drawAxes = function() {
     var w = this.width;
     var h = this.height;
     this.ctx.beginPath();
     this.ctx.strokeStyle = "rgb(128,128,128)";
-    this.ctx.moveTo(0,this.y0); plot.ctx.lineTo(w,this.y0);  // X axis
-    this.ctx.moveTo(this.x0,0); plot.ctx.lineTo(this.x0,h);  // Y axis
+    this.ctx.moveTo(0,this.y0); this.ctx.lineTo(w,this.y0);  // X axis
+    this.ctx.moveTo(this.x0,0); this.ctx.lineTo(this.x0,h);  // Y axis
     this.ctx.stroke();
 
     // draw rulers
