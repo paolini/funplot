@@ -4,8 +4,7 @@ const odePanel = {
       expr: "",
       expr_x: "",
       expr_y: "",
-      x: "?",
-      y: "?",
+      formula_html: "...",
       compiled_expr: null,
       compiled_expr_x: null,
       compiled_expr_y: null,
@@ -13,13 +12,81 @@ const odePanel = {
       draw_arrows: true,
       points: [] }
   },
-  props: {system: true},
+  props: {
+    system: true
+  },
+  watch: {
+    expr_x: function() {this.update()},
+    expr_y: function() {this.update()},
+    expr: function() {this.update()}
+  },
   methods: {
     update: function() {
+      if (this.system) {
+        try {
+          this.compiled_expr_x = math.compile(this.expr_x);
+          this.compiled_expr_y = math.compile(this.expr_y);
+        } catch(e) {
+          alert(e);
+          return;
+        }
+        this.formula_html = '$$\\begin{cases}'
+        + 'x\' = ' + math.parse(this.expr_x).toTex() + '\\\\'
+        + 'y\' = ' + math.parse(this.expr_y).toTex()
+        + '\\end{cases}$$';
+      } else { // equation
+        try {
+          this.compiled_expr = math.compile(this.expr);
+        } catch(e) {
+          alert(e);
+          return;
+        }
+        this.formula_html = '$$y\' = ' + math.parse(this.expr.replace(/y/g,'y')).toTex() + '$$';
+      }
+      this.$nextTick(function() {
+        MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+      });
+      this.$parent.draw_to_canvas();
+    },
+    draw: function(plot) {
+      var fx, fy;
+      var that = this;
 
+      if (this.system) {
+        fx = function (x, y) { return that.compiled_expr_x.eval({'x': x, 'y': y});};
+        fy = function (x, y) { return that.compiled_expr_y.eval({'x': x, 'y': y});};
+      } else {
+        fx = function (x, y) { return 1.0; };
+        fy = function (x, y) { return that.compiled_expr.eval({'x': x, 'y': y});}
+      }
+
+      plot.ctx.lineWidth = 2;
+      plot.ctx.strokeStyle = "rgb(200,200,0)";
+      if (this.draw_slope)
+          slopeGraph(plot, fx, fy);
+      plot.ctx.lineWidth = 1;
+      plot.ctx.strokeStyle = "rgb(66,44,255)";
+      options = {draw_arrows: this.system, equation: !this.system};
+      for (var i=0; i<this.points.length; ++i) {
+          odePlot(plot, fx, fy, this.points[i].x, this.points[i].y, options);
+      }
+    },
+    click: function(coords) {
+      this.points.push(coords);
+      this.update();
+    },
+    clear: function() {
+      this.points = [];
+      this.update();
     }
   },
   created() {
+    if (this.system) {
+      if (this.expr_x === "") this.expr_x = "y";
+      if (this.expr_y === "") this.expr_y = "-sin(x)-y";
+    } else {
+      if (this.expr === "") this.expr = "y^2+x";
+    }
   },
   template:
     '<div class="odepanel">' +
@@ -27,29 +94,18 @@ const odePanel = {
     '<input v-model="draw_slope" type="checkbox">draw slope field' +
     '<button @click="clear">clear integral lines</button>' +
     '<div v-if="system">' +
-    '  x\'(x,y) = <input id="expr_x" class="expr" value="y"> <br /> ' +
-    '  y\'(x,y) = <input id="expr_y" class="expr" value="-sin(x)-y"> ' +
+    '  x\'(x,y) = <input v-model="expr_x" class="expr"> <br /> ' +
+    '  y\'(x,y) = <input v-model="expr_y" class="expr"> ' +
     '</div>' +
     '<div v-else>' +
-    '  y\'(x) = <input id="expr" class="expr" value="y^2+x">' +
+    '  y\'(x) = <input v-model="expr" class="expr">' +
     '</div>' +
-    '<p id="formula">...</p>' +
+    '<p v-html="formula_html"></p>' +
     '</div>'
 }
 
 Vue.component("odePanel", odePanel);
 const OdePanel = Vue.extend(odePanel);
-
-var expr = "";
-var expr_x = "";
-var expr_y = "";
-var system = true;
-var compiled_expr, compiled_expr_x, compiled_expr_y;
-var plot;
-var draw_slope;
-var draw_arrows = true;
-
-var points = [];
 
 function slopeGraph(plot, fx, fy) {
   var xmin = plot.x_pixel(0);
@@ -119,30 +175,6 @@ function odePlot(plot, fx, fy, x0, y0, options) {
 }
 
 function draw() {
-    var fx, fy;
-
-    if (system) {
-      fx = function (x, y) { return compiled_expr_x.eval({'x': x, 'y': y});};
-      fy = function (x, y) { return compiled_expr_y.eval({'x': x, 'y': y});};
-    } else {
-      fx = function (x, y) { return 1.0; };
-      fy = function (x, y) { return compiled_expr.eval({'x': x, 'y': y});}
-    }
-
-
-    plot.ctx.lineWidth = 2;
-    plot.ctx.strokeStyle = "rgb(200,200,0)";
-    if (draw_slope)
-        slopeGraph(plot, fx, fy);
-    plot.ctx.lineWidth = 1;
-    plot.ctx.strokeStyle = "rgb(66,44,255)";
-    options = {draw_arrows: system, equation: !system};
-    for (var i=0; i<points.length; ++i) {
-        odePlot(plot, fx, fy, points[i].x, points[i].y, options);
-    }
-}
-
-function draw_to_canvas() {
 }
 
 function draw_to_pdf() {
@@ -159,32 +191,6 @@ function draw_to_pdf() {
 }
 
 function update() {
-    if (system) {
-      expr_x = $("#expr_x").val();
-      expr_y = $("#expr_y").val();
-      try {
-        compiled_expr_x = math.compile(expr_x);
-        compiled_expr_y = math.compile(expr_y);
-      } catch(e) {
-        alert(e);
-        return;
-      }
-      $("#formula").html('$$\\begin{cases}'
-      + 'x\' = ' + math.parse(expr_x).toTex() + '\\\\'
-      + 'y\' = ' + math.parse(expr_y).toTex()
-      + '\\end{cases}$$');
-    } else { // equation
-      expr = $("#expr").val();
-      try {
-        compiled_expr = math.compile(expr);
-      } catch(e) {
-        alert(e);
-        return;
-      }
-      $("#formula").html('$$y\' = ' + math.parse(expr.replace(/y/g,'y')).toTex() + '$$');
-    }
-    MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
-
     draw_to_canvas();
 
     function round(x) {
@@ -298,11 +304,6 @@ function ode_init() {
     });
 
     $("#canvas").on("mousedown",function(event) {
-      if (plot) {
-       var coords = plot.mouse_coords(event);
-       points.push(coords);
-    	 update();
-     }
     });
 
     setCanvasEvents();
