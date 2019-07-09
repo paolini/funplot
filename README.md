@@ -1,5 +1,7 @@
-recurrence
+funplot
 ==========
+
+this code forked from https://github.com/paolini/recurrence/
 
 draw cobweb diagrams for a recurrence relation
 
