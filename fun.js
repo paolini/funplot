@@ -6,7 +6,9 @@ vueApp = {
       y: "?",
       new_plot: "",
       plot: null,
-      canvas: null
+      canvas: null,
+      drag_start: null,
+      dragged: false
       }
     },
   watch: {
@@ -27,21 +29,20 @@ vueApp = {
       }
       if (panel) {
         panel.$mount();
+        this.$children.forEach(function(child) {
+          child.active = false;
+        });
         this.$refs.plots.appendChild(panel.$el);
+        panel.active = true;
       }
       this.new_plot = "";
     }
   },
   methods: {
-    mousemove: function(event) {
-      var coords = this.plot.mouse_coords(event);
-      this.x = coords.x;
-      this.y = coords.y;
-    },
     mouseclick: function(event) {
       var coords = this.plot.mouse_coords(event);
       this.$children.forEach(function(panel){
-        panel.click(coords);
+        if (panel.active)  panel.click(coords);
       });
     },
     draw: function(plot) {
@@ -67,11 +68,58 @@ vueApp = {
       yCenter: 0.0,
       radius: Math.sqrt(320*320 + 240*240) / 80
     });
-    this.plot.setCanvas(this.$refs.canvas);
+    var canvas = this.$refs.canvas;
+    this.plot.setCanvas(canvas);
     this.draw_to_canvas();
+    $(window).resize(this.draw_to_canvas);
+
+    canvas.addEventListener("mousedown", function(evt) {
+      document.body.style.mozUserSelect =
+      document.body.style.webkitUserSelect =
+      document.body.style.userSelect = 'none';
+      that.drag_start = that.plot.mouse_coords(evt);
+      that.dragged = false;
+    }, false);
+
+    canvas.addEventListener("mousemove", function(evt) {
+      var pos = that.plot.mouse_coords(evt);
+      if (that.drag_start) {
+        that.plot.translate(that.drag_start.x-pos.x, that.drag_start.y-pos.y);
+        // pos = that.plot.mouse_coords(evt);
+        // that.drag_start = pos;
+        that.draw_to_canvas();
+        that.dragged = true;
+      }
+      this.x = pos.x;
+      this.y = pos.y;
+    }, false);
+
+    canvas.addEventListener("mouseup", function(evt) {
+      var pos = that.plot.mouse_coords(evt);
+      if (!that.dragged) { // it's a drag not click!
+        that.$children.forEach(function(panel){
+          if (panel.active)  panel.click(pos);
+        });
+      }
+      that.dragged = false;
+      that.drag_start = null;
+    }, false);
+
+    var handleScroll = function(evt) {
+      var delta = evt.wheelDelta ? evt.wheelDelta/40 : evt.detail ? -evt.detail : 0;
+      if (delta) {
+        var coords = that.plot.mouse_coords(evt);
+        var factor = Math.exp(delta/40);
+        that.plot.zoom(factor, coords.x, coords.y);
+        that.draw_to_canvas();
+      }
+      return evt.preventDefault() && false;
+    }
+    canvas.addEventListener('DOMMouseScroll',handleScroll,false);
+    canvas.addEventListener('mousewheel',handleScroll,false);
   },
   template:
-    '<div class="panel">' +
+    '<div class="fun">' +
     ' <div ref="plots">' +
     ' </div>' +
     '  <select v-model="new_plot">' +
@@ -82,7 +130,7 @@ vueApp = {
     ' <br />' +
     '  x=<span v-html="x">...</span>, y=<span v-html="y">...</span><br />' +
     '<p>(Click on the picture to draw an integral line. Mouse wheel (or pan) to zoom in/out. Use zoom out/in to translate)</p> ' +
-    '<canvas @mousemove="mousemove" @mousedown="mouseclick" ref="canvas" width="640" height="480"></canvas>' +
+    '<canvas ref="canvas" width="640" height="480"></canvas>' +
     '<p id="bottom" ref="bottom"> ' +
     '  <button>PDF export</button>' +
     '  Source on <a href="https://github.com/paolini/recurrence/">github</a> ' +

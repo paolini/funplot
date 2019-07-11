@@ -8,9 +8,14 @@ const odePanel = {
       compiled_expr: null,
       compiled_expr_x: null,
       compiled_expr_y: null,
+      expr_compilation_error: "",
+      expr_x_compilation_error: "",
+      expr_y_compilation_error: "",
       draw_slope: false,
       draw_arrows: true,
-      points: [] }
+      points: [],
+      active: true
+     }
   },
   props: {
     system: true
@@ -18,18 +23,26 @@ const odePanel = {
   watch: {
     expr_x: function() {this.update()},
     expr_y: function() {this.update()},
-    expr: function() {this.update()}
+    expr: function() {this.update()},
+    draw_slope: function() {this.update()}
   },
   methods: {
     update: function() {
+      this.expr_compilation_error = "";
+      this.expr_x_compilation_error = "";
+      this.expr_y_compilation_error = "";
       if (this.system) {
         try {
           this.compiled_expr_x = math.compile(this.expr_x);
+        } catch(e) {
+          this.expr_x_compilation_error = "" + e;
+        }
+        try {
           this.compiled_expr_y = math.compile(this.expr_y);
         } catch(e) {
-          alert(e);
-          return;
+          this.expr_y_compilation_error = "" + e;
         }
+        if (this.expr_x_compilation_error || this.expr_y_compilation_error) return;
         this.formula_html = '$$\\begin{cases}'
         + 'x\' = ' + math.parse(this.expr_x).toTex() + '\\\\'
         + 'y\' = ' + math.parse(this.expr_y).toTex()
@@ -38,7 +51,7 @@ const odePanel = {
         try {
           this.compiled_expr = math.compile(this.expr);
         } catch(e) {
-          alert(e);
+          this.expr_compilation_error = "" + e;
           return;
         }
         this.formula_html = '$$y\' = ' + math.parse(this.expr.replace(/y/g,'y')).toTex() + '$$';
@@ -63,13 +76,19 @@ const odePanel = {
       plot.ctx.lineWidth = 2;
       plot.ctx.strokeStyle = "rgb(200,200,0)";
       if (this.draw_slope)
-          slopeGraph(plot, fx, fy);
+          slopeGraph(plot, fx, fy, this.draw_arrows);
       plot.ctx.lineWidth = 1;
       plot.ctx.strokeStyle = "rgb(66,44,255)";
       options = {draw_arrows: this.system, equation: !this.system};
       for (var i=0; i<this.points.length; ++i) {
           odePlot(plot, fx, fy, this.points[i].x, this.points[i].y, options);
       }
+    },
+    edit: function() {
+      this.$parent.$children.forEach(function(child) {
+        child.active = false;
+      });
+      this.active = true;
     },
     click: function(coords) {
       this.points.push(coords);
@@ -89,25 +108,24 @@ const odePanel = {
     }
   },
   template:
-    '<div class="odepanel">' +
-    '<button @click="update">update</button>' +
-    '<input v-model="draw_slope" type="checkbox">draw slope field' +
-    '<button @click="clear">clear integral lines</button>' +
-    '<div v-if="system">' +
-    '  x\'(x,y) = <input v-model="expr_x" class="expr"> <br /> ' +
-    '  y\'(x,y) = <input v-model="expr_y" class="expr"> ' +
+    '<div class="funpanel">' +
+    '<label v-if="active"><input v-model="draw_slope" type="checkbox">draw slope field</label>' +
+    '<button v-if="active" @click="clear">clear integral lines</button>' +
+    '<div v-if="active && system">' +
+    '  x\'(x,y) = <input v-model="expr_x" class="expr"> <span v-html="expr_x_compilation_error"></span><br /> ' +
+    '  y\'(x,y) = <input v-model="expr_y" class="expr"> <span v-html="expr_y_compilation_error"></span>' +
     '</div>' +
-    '<div v-else>' +
-    '  y\'(x) = <input v-model="expr" class="expr">' +
+    '<div v-if="active && !system">' +
+    '  y\'(x) = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
     '</div>' +
-    '<p v-html="formula_html"></p>' +
+    '<p @click="edit" v-html="formula_html"></p>' +
     '</div>'
 }
 
 Vue.component("odePanel", odePanel);
 const OdePanel = Vue.extend(odePanel);
 
-function slopeGraph(plot, fx, fy) {
+function slopeGraph(plot, fx, fy, draw_arrows) {
   var xmin = plot.x_pixel(0);
   var ymin = plot.y_pixel(plot.height);
   var xmax = plot.x_pixel(plot.width);
@@ -253,62 +271,7 @@ function ode_init() {
       }
     }
 
-    $("#select").change(
-      function() {
-          system = ($("#select").val() == "system");
-          if (system) {
-            $(".equation").hide();
-            $(".system").show();
-          } else {
-            $(".system").hide();
-            $(".equation").show();
-          }
-          update();
-      }
-    );
-
-    if (system) {
-      $("#select").val("system");
-    } else {
-      $("#select").val("equation");
-    }
-    $("#select").change();
-
-    $(".expr").keyup(function(event) {
-        if (event.keyCode == 13)
-            update();
-    });
-
-    $("#draw").click(function() {
-        update();
-    });
-
-    $("#clear_button").click(function() {
-      points = [];
-      update();
-    });
-
     $("#pdf_button").click(function() {
       draw_to_pdf();
     });
-
-    if (params['slope']=="1") {
-        draw_slope = true;
-    } else {
-        draw_slope = false;
-    }
-    $("#draw_slope").prop('checked', draw_slope);
-    $("#draw_slope").change(function() {
-      draw_slope = $("#draw_slope").is(":checked");
-      update();
-    });
-
-    $("#canvas").on("mousedown",function(event) {
-    });
-
-    setCanvasEvents();
-
-    $(window).resize(update);
-
-    update();
 }

@@ -41,6 +41,12 @@ Plot.prototype.zoom = function(factor, x, y) {
   if (this.canvas) this.setCanvas(this.canvas);
 }
 
+Plot.prototype.translate = function(dx, dy) {
+  this.xCenter += dx;
+  this.yCenter += dy;
+  if (this.canvas) this.setCanvas(this.canvas);
+}
+
 Plot.prototype.getReference = function() {
     return {
       widthPx: this.width,

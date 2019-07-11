@@ -1,9 +1,3 @@
-function new_svg_elem(elem) {
-    return $(document.createElementNS('http://www.w3.org/2000/svg', elem));
-}
-
-// function plotFunctionGraph(ctx, plot, func) {}
-
 function funGraph(plot, func) {
     var yy, x, dx=2, x0=plot.x0, y0=plot.y0, scale=plot.scale;
     var iMax = Math.round((plot.width-x0)/dx);
@@ -43,26 +37,6 @@ function get_querystring_params() {
     	urlParams[decode(match[1])] = decode(match[2]);
     }
     return urlParams;
-}
-
-function setCanvasEvents() {
-    $("#canvas").on("mousemove",function(event) {
-      	var coords = plot.mouse_coords(event);
-      	$("#x").html(""+coords.x);
-      	$("#y").html(""+coords.y);
-    });
-
-    // if mousewheel is moved
-    $("#canvas").mousewheel(function(e, delta) {
-      if (!plot) return;
-    	var coords = plot.mouse_coords(e);
-    	// determine the new scale
-    	var factor = 1.04
-    	if (delta < 0) factor = 1.0/factor
-      plot.zoom(factor, coords.x, coords.y);
-    	update();
-    	return false;
-    });
 }
 
 function newPlotFromParams(params) {
