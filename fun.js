@@ -16,6 +16,8 @@ vueApp = {
       var panel;
       if (val === "") {
         return; // deselected!
+      } else if (val === "graph") {
+        panel = new GraphPanel({parent: this});
       } else if (val === "ode_equation") {
         panel = new OdePanel({
           parent: this,
@@ -71,7 +73,7 @@ vueApp = {
     var canvas = this.$refs.canvas;
     this.plot.setCanvas(canvas);
     this.draw_to_canvas();
-    $(window).resize(this.draw_to_canvas);
+    window.addEventListener("resize", this.draw_to_canvas);
 
     canvas.addEventListener("mousedown", function(evt) {
       document.body.style.mozUserSelect =
@@ -124,12 +126,12 @@ vueApp = {
     ' </div>' +
     '  <select v-model="new_plot">' +
     '    <option disabled value="">new plot (select type)</option>' +
+    '    <option value="graph">graph</option>' +
     '    <option value="ode_equation">ODE equation</option>' +
     '    <option value="ode_system">ODE system</option>' +
     '  </select>' +
     ' <br />' +
     '  x=<span v-html="x">...</span>, y=<span v-html="y">...</span><br />' +
-    '<p>(Click on the picture to draw an integral line. Mouse wheel (or pan) to zoom in/out. Use zoom out/in to translate)</p> ' +
     '<canvas ref="canvas" width="640" height="480"></canvas>' +
     '<p id="bottom" ref="bottom"> ' +
     '  <button>PDF export</button>' +

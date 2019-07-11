@@ -1,22 +1,3 @@
-function funGraph(plot, func) {
-    var yy, x, dx=2, x0=plot.x0, y0=plot.y0, scale=plot.scale;
-    var iMax = Math.round((plot.width-x0)/dx);
-    var iMin = Math.round(-x0/dx);
-    plot.ctx.beginPath();
-
-    for (var i=iMin;i<=iMax;i++) {
-      	x = i*dx/scale;
-      	var y = func(x);
-      	if (i==iMin || Math.abs(y-yy)>dx*100) {
-      	    plot.moveTo(x, func(x));
-      	} else {
-            plot.lineTo(x, func(x));
-	      }
-      	yy = y;
-    }
-    plot.ctx.stroke();
-}
-
 function get_querystring_params() {
     // adapted from http://stackoverflow.com/a/2880929/1221660
     var urlParams = {};
