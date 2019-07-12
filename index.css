@@ -11,4 +11,22 @@ canvas {
     border: 1px;
 }
 
+.panels {
+}
+
+.panel {
+  display: flex;
+  border: 1px solid;
+  margin: -1px;
+}
+
+.options_pane {
+  width: 30%;
+}
+
+.formula_pane {
+  flex-grow: 1;
+  margin: 0;
+}
+
 #bottom { position: fixed; bottom: 0; right: 0;}

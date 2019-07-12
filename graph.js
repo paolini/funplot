@@ -49,11 +49,14 @@ const graphPanel = {
     if (this.expr === "") this.expr = "x*sin(1/x)";
   },
   template:
-    '<div class="graphpanel">' +
-    '<div v-if="active">' +
+    '<div class="panel">' +
+    '<div class="options_pane" v-if="active">' +
     '  y(x) = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
     '</div>' +
-    '<p @click="edit" v-html="formula_html"></p>' +
+    '<div class="options_pane" v-else>' +
+    '<br/><button @click="edit">edit</button>' +
+    '</div>' +
+    '<p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
     '</div>'
 }
 

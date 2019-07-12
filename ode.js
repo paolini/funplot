@@ -20,6 +20,11 @@ const odePanel = {
   props: {
     system: true
   },
+  filters: {
+    round: function(value) {
+      return math.format(value, {precision: 2});
+    }
+  },
   watch: {
     expr_x: function() {this.update()},
     expr_y: function() {this.update()},
@@ -108,17 +113,24 @@ const odePanel = {
     }
   },
   template:
-    '<div class="funpanel">' +
-    '<label v-if="active"><input v-model="draw_slope" type="checkbox">draw slope field</label>' +
-    '<button v-if="active" @click="clear">clear integral lines</button>' +
-    '<div v-if="active && system">' +
+    '<div class="panel">' +
+    '<div v-if="active" class="options_pane">' +
+    '<label><input v-model="draw_slope" type="checkbox">draw slope field</label>' +
+    '<div v-if="system">' +
     '  x\'(x,y) = <input v-model="expr_x" class="expr"> <span v-html="expr_x_compilation_error"></span><br /> ' +
     '  y\'(x,y) = <input v-model="expr_y" class="expr"> <span v-html="expr_y_compilation_error"></span>' +
     '</div>' +
-    '<div v-if="active && !system">' +
+    '<div v-else>' +
     '  y\'(x) = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
     '</div>' +
-    '<p @click="edit" v-html="formula_html"></p>' +
+    '<span v-for="point in points">({{ point.x | round }}, {{ point.y | round }})</span>' +
+    '<button @click="clear" v-if="points.length">clear integral lines</button>' +
+    '<span v-else>(click on picture to plot integral lines)</span>' +
+    '</div>' +
+    '<div class="options_pane" v-else>' +
+    '<br/><button @click="edit">edit</button>' +
+    '</div>' +
+    '<p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
     '</div>'
 }
 

@@ -92,8 +92,8 @@ vueApp = {
         that.draw_to_canvas();
         that.dragged = true;
       }
-      this.x = pos.x;
-      this.y = pos.y;
+      that.x = pos.x;
+      that.y = pos.y;
     }, false);
 
     canvas.addEventListener("mouseup", function(evt) {
@@ -122,7 +122,7 @@ vueApp = {
   },
   template:
     '<div class="fun">' +
-    ' <div ref="plots">' +
+    ' <div class="panels" ref="plots">' +
     ' </div>' +
     '  <select v-model="new_plot">' +
     '    <option disabled value="">new plot (select type)</option>' +
