@@ -134,8 +134,8 @@ vueApp = {
     '  x=<span v-html="x">...</span>, y=<span v-html="y">...</span><br />' +
     '<canvas ref="canvas" width="640" height="480"></canvas>' +
     '<p id="bottom" ref="bottom"> ' +
-    '  <button>PDF export</button>' +
-    '  Source on <a href="https://github.com/paolini/recurrence/">github</a> ' +
+    '  <button v-if="false">PDF export</button>' +
+    '  Source on <a href="https://github.com/paolini/funplot/">github</a> ' +
     '</p>' +
     '</div>'
 };
