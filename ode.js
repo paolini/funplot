@@ -1,4 +1,26 @@
 const odePanel = {
+  template:
+    '<div class="panel">' +
+    '<div v-if="active" class="options_pane">' +
+    'color <colorpicker v-model="plot_color" />' +
+    '<label><input v-model="draw_slope" type="checkbox"> draw slope field</label> <colorpicker v-model="slope_color" /> ' +
+    '<label><input v-model="grid_points" type="checkbox"> fill plane</label>' +
+    '<div v-if="system">' +
+    '  x\'(x,y) = <input v-model="expr_x" class="expr"> <span v-html="expr_x_compilation_error"></span><br /> ' +
+    '  y\'(x,y) = <input v-model="expr_y" class="expr"> <span v-html="expr_y_compilation_error"></span>' +
+    '</div>' +
+    '<div v-else>' +
+    '  y\'(x) = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
+    '</div>' +
+    '<span v-for="point in points">({{ point.x | round }}, {{ point.y | round }})</span>' +
+    '<button @click="clear" v-if="points.length">clear integral lines</button>' +
+    '<span v-else>(click on picture to plot integral lines)</span>' +
+    '</div>' +
+    '<div class="options_pane" v-else>' +
+    '<br/><button @click="edit">edit</button>' +
+    '</div>' +
+    '<p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
+    '</div>',
   data: function() {
     return {
       expr: "",
@@ -13,6 +35,8 @@ const odePanel = {
       expr_y_compilation_error: "",
       draw_slope: false,
       draw_arrows: true,
+      grid_points: true,
+      grid_count: 10,
       points: [],
       active: true,
       plot_color: {hex: "#4A90E2"},
@@ -32,6 +56,7 @@ const odePanel = {
     expr_y: function() {this.update()},
     expr: function() {this.update()},
     draw_slope: function() {this.$parent.draw_to_canvas()},
+    grid_points() {this.$parent.draw_to_canvas()},
     plot_color: function() {this.$parent.draw_to_canvas()},
     slope_color: function() {this.$parent.draw_to_canvas()}
   },
@@ -73,6 +98,25 @@ const odePanel = {
     draw: function(plot) {
       var fx, fy;
       var that = this;
+      var grid_distance = 0;
+      var options = {
+        draw_arrows: this.system,
+        equation: !this.system,
+        grid_points: [],
+        grid_distance: 0
+      };
+
+      if (this.grid_points) {
+        var ref = plot.getReference();
+        var dx = plot.radius / this.grid_count;
+        var dy = dx;
+        options.grid_distance = Math.sqrt(2) * dx / 1.99;
+        for (var x = ref.xMin + dx/2; x < ref.xMax; x+=dx) {
+          for (var y = ref.yMin + dy/2; y < ref.yMax; y+=dy) {
+            options.grid_points.push([x,y]);
+          }
+        }
+      }
 
       if (this.system) {
         fx = function (x, y) { return that.compiled_expr_x.eval({'x': x, 'y': y});};
@@ -89,9 +133,14 @@ const odePanel = {
       }
       plot.ctx.lineWidth = 1;
       plot.ctx.strokeStyle = this.plot_color.hex;
-      options = {draw_arrows: this.system, equation: !this.system};
+
       for (var i=0; i<this.points.length; ++i) {
           odePlot(plot, fx, fy, this.points[i].x, this.points[i].y, options);
+      }
+
+      while (options.grid_points.length>0) {
+        var point = options.grid_points.pop();
+        odePlot(plot, fx, fy, point[0], point[1], options);
       }
     },
     edit: function() {
@@ -116,29 +165,7 @@ const odePanel = {
     } else {
       if (this.expr === "") this.expr = "y^2+x";
     }
-  },
-  template:
-    '<div class="panel">' +
-    '<div v-if="active" class="options_pane">' +
-    'color <colorpicker v-model="plot_color" />' +
-    '<label><input v-model="draw_slope" type="checkbox"> draw slope field</label> ' +
-    '<colorpicker v-model="slope_color" /> ' +
-    '<div v-if="system">' +
-    '  x\'(x,y) = <input v-model="expr_x" class="expr"> <span v-html="expr_x_compilation_error"></span><br /> ' +
-    '  y\'(x,y) = <input v-model="expr_y" class="expr"> <span v-html="expr_y_compilation_error"></span>' +
-    '</div>' +
-    '<div v-else>' +
-    '  y\'(x) = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
-    '</div>' +
-    '<span v-for="point in points">({{ point.x | round }}, {{ point.y | round }})</span>' +
-    '<button @click="clear" v-if="points.length">clear integral lines</button>' +
-    '<span v-else>(click on picture to plot integral lines)</span>' +
-    '</div>' +
-    '<div class="options_pane" v-else>' +
-    '<br/><button @click="edit">edit</button>' +
-    '</div>' +
-    '<p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
-    '</div>'
+  }
 }
 
 Vue.component("odePanel", odePanel);
@@ -190,6 +217,7 @@ function odePlot(plot, fx, fy, x0, y0, options) {
     for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && (step < maxstep || equation); step++) {
       var dx = fx(x, y);
       var dy = fy(x, y);
+      if (isNaN(dx) || isNaN(dy)) break;
       var l = dt / Math.sqrt(dx*dx + dy*dy);
       if (l>2 && !equation) break;
       var r = dir * l;
@@ -202,6 +230,18 @@ function odePlot(plot, fx, fy, x0, y0, options) {
       plot.lineTo(x, y);
       if (draw_arrows && step % (2*arrow_step) == arrow_step) {
         arrows.push([x, y, dx, dy]);
+      }
+      if (options.grid_points && options.grid_distance) {
+        var d2 = options.grid_distance * options.grid_distance;
+        var grid = options.grid_points;
+        for (var i=0; i<grid.length; ++i) {
+          var dx = grid[i][0] - x;
+          var dy = grid[i][1] - y;
+          if (dx*dx + dy*dy <= d2) {
+            grid.splice(i,1);
+            i--;
+          }
+        }
       }
     }
     plot.ctx.stroke();
