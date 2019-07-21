@@ -5,11 +5,13 @@ const graphPanel = {
       formula_html: "...",
       compiled_expr: null,
       expr_compilation_error: "",
-      active: true
+      active: true,
+      plot_color: {hex: "#417505"}
      }
   },
   watch: {
     expr: function() {this.update()},
+    plot_color: function() {this.$parent.draw_to_canvas();}
   },
   methods: {
     update: function() {
@@ -34,7 +36,7 @@ const graphPanel = {
         return that.compiled_expr.eval({'x': x});
       }
 
-      plot.ctx.strokeStyle = "rgb(66,44,255)";
+      plot.ctx.strokeStyle = this.plot_color.hex;
       funGraph(plot, f);
     },
     edit: function() {
@@ -51,6 +53,7 @@ const graphPanel = {
   template:
     '<div class="panel">' +
     '<div class="options_pane" v-if="active">' +
+    '<colorpicker v-model="plot_color" /> ' +
     '  y(x) = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
     '</div>' +
     '<div class="options_pane" v-else>' +

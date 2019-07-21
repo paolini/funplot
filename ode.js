@@ -14,7 +14,9 @@ const odePanel = {
       draw_slope: false,
       draw_arrows: true,
       points: [],
-      active: true
+      active: true,
+      plot_color: {hex: "#4A90E2"},
+      slope_color: {hex: "#7ED321"}
      }
   },
   props: {
@@ -29,7 +31,9 @@ const odePanel = {
     expr_x: function() {this.update()},
     expr_y: function() {this.update()},
     expr: function() {this.update()},
-    draw_slope: function() {this.update()}
+    draw_slope: function() {this.$parent.draw_to_canvas()},
+    plot_color: function() {this.$parent.draw_to_canvas()},
+    slope_color: function() {this.$parent.draw_to_canvas()}
   },
   methods: {
     update: function() {
@@ -78,12 +82,13 @@ const odePanel = {
         fy = function (x, y) { return that.compiled_expr.eval({'x': x, 'y': y});}
       }
 
-      plot.ctx.lineWidth = 2;
-      plot.ctx.strokeStyle = "rgb(200,200,0)";
-      if (this.draw_slope)
+      if (this.draw_slope) {
+          plot.ctx.lineWidth = 2;
+          plot.ctx.strokeStyle = this.slope_color.hex;
           slopeGraph(plot, fx, fy, this.draw_arrows);
+      }
       plot.ctx.lineWidth = 1;
-      plot.ctx.strokeStyle = "rgb(66,44,255)";
+      plot.ctx.strokeStyle = this.plot_color.hex;
       options = {draw_arrows: this.system, equation: !this.system};
       for (var i=0; i<this.points.length; ++i) {
           odePlot(plot, fx, fy, this.points[i].x, this.points[i].y, options);
@@ -115,7 +120,9 @@ const odePanel = {
   template:
     '<div class="panel">' +
     '<div v-if="active" class="options_pane">' +
-    '<label><input v-model="draw_slope" type="checkbox">draw slope field</label>' +
+    'color <colorpicker v-model="plot_color" />' +
+    '<label><input v-model="draw_slope" type="checkbox"> draw slope field</label> ' +
+    '<colorpicker v-model="slope_color" /> ' +
     '<div v-if="system">' +
     '  x\'(x,y) = <input v-model="expr_x" class="expr"> <span v-html="expr_x_compilation_error"></span><br /> ' +
     '  y\'(x,y) = <input v-model="expr_y" class="expr"> <span v-html="expr_y_compilation_error"></span>' +
