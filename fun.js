@@ -1,5 +1,24 @@
 vueApp = {
   el: '#app',
+  template:
+    '<div class="fun">' +
+    ' <div class="panels" ref="plots">' +
+    ' </div>' +
+    '  <select v-model="new_plot">' +
+    '    <option disabled value="">new plot (select type)</option>' +
+    '    <option value="graph">graph y=f(x)</option>' +
+    '    <option value="graph_inverted">graph x=f(y)</option>' +
+    '    <option value="ode_equation">ODE equation</option>' +
+    '    <option value="ode_system">ODE system</option>' +
+    '  </select>' +
+    ' <br />' +
+    '  x=<span v-html="x">...</span>, y=<span v-html="y">...</span><br />' +
+    '<canvas ref="canvas" width="640" height="480"></canvas>' +
+    '<p id="bottom" ref="bottom"> ' +
+    '  <button v-if="false">PDF export</button>' +
+    '  Source on <a href="https://github.com/paolini/funplot/">github</a> ' +
+    '</p>' +
+    '</div>',
   data: function() {
     return {
       x: "?",
@@ -18,6 +37,8 @@ vueApp = {
         return; // deselected!
       } else if (val === "graph") {
         panel = new GraphPanel({parent: this});
+      } else if (val === "graph_inverted") {
+        panel = new GraphPanel({parent: this, propsData: {inverted: true}});
       } else if (val === "ode_equation") {
         panel = new OdePanel({
           parent: this,
@@ -119,25 +140,7 @@ vueApp = {
     }
     canvas.addEventListener('DOMMouseScroll',handleScroll,false);
     canvas.addEventListener('mousewheel',handleScroll,false);
-  },
-  template:
-    '<div class="fun">' +
-    ' <div class="panels" ref="plots">' +
-    ' </div>' +
-    '  <select v-model="new_plot">' +
-    '    <option disabled value="">new plot (select type)</option>' +
-    '    <option value="graph">graph</option>' +
-    '    <option value="ode_equation">ODE equation</option>' +
-    '    <option value="ode_system">ODE system</option>' +
-    '  </select>' +
-    ' <br />' +
-    '  x=<span v-html="x">...</span>, y=<span v-html="y">...</span><br />' +
-    '<canvas ref="canvas" width="640" height="480"></canvas>' +
-    '<p id="bottom" ref="bottom"> ' +
-    '  <button v-if="false">PDF export</button>' +
-    '  Source on <a href="https://github.com/paolini/funplot/">github</a> ' +
-    '</p>' +
-    '</div>'
+  }
 };
 
 window.addEventListener('load', function() {

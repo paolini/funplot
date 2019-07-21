@@ -1,4 +1,15 @@
 const graphPanel = {
+  template:
+    '<div class="panel">' +
+    '<div class="options_pane" v-if="active">' +
+    '<colorpicker v-model="plot_color" /> ' +
+    '<span v-if="inverted">x(y)</span><span v-else>y(x)</span> = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
+    '</div>' +
+    '<div class="options_pane" v-else>' +
+    '<br/><button @click="edit">edit</button>' +
+    '</div>' +
+    '<p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
+    '</div>',
   data: function() {
     return {
       expr: "",
@@ -8,6 +19,9 @@ const graphPanel = {
       active: true,
       plot_color: {hex: "#417505"}
      }
+  },
+  props: {
+    inverted: false
   },
   watch: {
     expr: function() {this.update()},
@@ -22,7 +36,7 @@ const graphPanel = {
         this.expr_compilation_error = "" + e;
         return;
       }
-      this.formula_html = '$$y = ' + math.parse(this.expr).toTex() + '$$';
+      this.formula_html = (this.inverted?'$$x = ':'$$y = ') + math.parse(this.expr).toTex() + '$$';
       this.$nextTick(function() {
         MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
       });
@@ -33,11 +47,11 @@ const graphPanel = {
       var that = this;
       if (!this.compiled_expr) return;
       f = function (x) {
-        return that.compiled_expr.eval({'x': x});
+        return that.compiled_expr.eval(
+          that.inverted?{'y': x}:{'x': x});
       }
-
       plot.ctx.strokeStyle = this.plot_color.hex;
-      funGraph(plot, f);
+      funGraph(plot, f, this.inverted);
     },
     edit: function() {
       this.$parent.$children.forEach(function(child) {
@@ -48,45 +62,44 @@ const graphPanel = {
     click: function() {}
   },
   created() {
-    if (this.expr === "") this.expr = "x*sin(1/x)";
-  },
-  template:
-    '<div class="panel">' +
-    '<div class="options_pane" v-if="active">' +
-    '<colorpicker v-model="plot_color" /> ' +
-    '  y(x) = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
-    '</div>' +
-    '<div class="options_pane" v-else>' +
-    '<br/><button @click="edit">edit</button>' +
-    '</div>' +
-    '<p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
-    '</div>'
+    if (this.expr === "") {
+      this.expr = this.inverted?"y^2":"x*sin(1/x)";
+    }
+  }
 }
 
 Vue.component("graphPanel", graphPanel);
 const GraphPanel = Vue.extend(graphPanel);
 
-function funGraph(plot, func) {
+function funGraph(plot, func, inverted) {
   var ref = plot.getReference();
-  var eps = 2.0*(ref.xMax - ref.xMin)/ref.widthPx;
+  var eps = inverted?
+    2.0*(ref.yMax - ref.yMin)/ref.heightPx:
+    2.0*(ref.xMax - ref.xMin)/ref.widthPx;
 
   plot.ctx.beginPath();
 
-  var x = ref.xMin;
+  var x = inverted?ref.yMin:ref.xMin;
   var y = func(x);
-  plot.moveTo(x,y);
+  inverted?plot.moveTo(y,x):plot.moveTo(x,y);
   var dx = eps;
   var count = 0;
-  while(x<ref.xMax) {
+  var xend = inverted?ref.yMax:ref.xMax;
+  while(x<xend) {
     var xx = x+dx;
     var yy = func(xx);
+    if (isNaN(yy)) {
+      dx = eps;
+      x = xx;
+      continue;
+    }
     var dy = Math.abs(yy - y);
     if (dy > eps*100) {
-      plot.moveTo(xx,yy);
+      inverted?plot.moveTo(yy,xx):plot.moveTo(xx,yy);
       y = yy;
       x = xx;
     } else if (dy < eps || dx < eps*0.01) {
-      plot.lineTo(xx, yy);
+      inverted?plot.lineTo(yy, xx):plot.lineTo(xx, yy);
       count ++;
       y = yy;
       x = xx;
