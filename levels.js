@@ -92,7 +92,7 @@ const levelPanel = {
     }
   },
   created() {
-    this.expr = "x^2 + y^2 - 1";
+    this.expr = "x^4 - x^2 + y^2";
   }
 }
 
@@ -212,7 +212,6 @@ function levelPlot(plot, f, levels, options) {
           var adj = squares[adj_n];
           var kk = (k+2)%4;
           if (adj.depth == child.depth) {
-            console.assert(squares[adj.adjacent[kk]].depth == square.depth);
             adj.adjacent[kk] = first+j;
           }
         }
@@ -265,15 +264,11 @@ function levelPlot(plot, f, levels, options) {
   var ymin = plot.y_pixel(plot.height);
   var xmax = plot.x_pixel(plot.width);
   var ymax = plot.y_pixel(0);
-  var pixel_eps = 60 * plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
-  var L = 10 * pixel_eps;
-
-  if (false) { // debugging
-    pixel_eps = 0.1;
-    L = 1.6;
-    xmin = -4;
-    ymin = -1;
-  }
+  var pixel_eps = 2 * plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
+  var L = 80 * pixel_eps;
+  var histogram = Array(100);
+  var histogram_sum = 0;
+  for (var i=0;i<histogram.length;++i) histogram[i] = 0;
 
   var square_south = 0;
   var square_west = 0;
@@ -316,8 +311,27 @@ function levelPlot(plot, f, levels, options) {
       console.assert(squares.length == n);
       squares.push(square);
       if (true) check_z(square);
+
+      var magnitude = 50+Math.floor(Math.log(Math.abs(square.z[0])));
+      if (magnitude>=0 && magnitude<histogram.length) {
+        histogram[magnitude] ++;
+        histogram_sum ++;
+      }
     }
   }
+
+  // find magnitude low 2-percentile
+  var count = 0;
+  var low_value;
+  for (var i=0;i<histogram.length;++i) {
+    count += histogram[i];
+    if (count*50>histogram_sum) {
+      low_value = Math.exp(i-50);
+      break;
+    }
+  }
+  // ci sono piu' di un ventesimo di quadrati
+  // con logaritmo
 
   // step 2: refinement
   while(true) {
@@ -335,6 +349,7 @@ function levelPlot(plot, f, levels, options) {
               if (adjacent.depth <= square.depth && !(adjacent.children[0])) adjacent.flag = 1;
             }
           }
+          if (square.depth <= 2 && Math.abs(square.z[j])<low_value) square.flag = 1;
         }
     }
 
@@ -372,7 +387,7 @@ function levelPlot(plot, f, levels, options) {
   }
 
   // draw squares
-  if (true) {
+  if (false) {
     for (var n=1; n<squares.length;++n) {
       var square = squares[n];
       var x = square.x;
