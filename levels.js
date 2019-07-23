@@ -16,6 +16,7 @@ const levelPanel = {
     '</div>' +
     '<div class="options_pane" v-else>' +
     '<br/><button @click="edit">edit</button>' +
+    '<span class="color_button" :style="\'background-color: \' + plot_color.hex"></span>' +
     '</div>' +
     '<p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
     '</div>',
@@ -28,7 +29,7 @@ const levelPanel = {
       levels: [],
       fill: true,
       active: true,
-      plot_color: {hex: "#4A90E2"},
+      plot_color: {hex: "#D0021B"},
      }
   },
   props: {
@@ -53,7 +54,7 @@ const levelPanel = {
         this.expr_compilation_error = "" + e;
         return;
       }
-      this.formula_html = '$$ f(x,y) = ' + math.parse(this.expr.replace(/y/g,'y')).toTex() + (this.zero?'=0$$': '$$');
+      this.formula_html = '$$ ' + math.parse(this.expr.replace(/y/g,'y')).toTex() + (this.zero?'=0$$': '$$');
       this.$nextTick(function() {
         MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
       });

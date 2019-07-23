@@ -18,6 +18,7 @@ const odePanel = {
     '</div>' +
     '<div class="options_pane" v-else>' +
     '<br/><button @click="edit">edit</button>' +
+    '<span class="color_button" :style="\'background-color: \' + plot_color.hex"></span>' +
     '</div>' +
     '<p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
     '</div>',
