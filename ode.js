@@ -251,8 +251,9 @@ function odePlot(plot, fx, fy, x0, y0, options) {
   }
 }
 
-function draw() {
-}
+/*
+ codice da recuperare per PDF e Hash
+*/
 
 function draw_to_pdf() {
   var canvas = $("#canvas")[0];

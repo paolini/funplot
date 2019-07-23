@@ -8,6 +8,7 @@ vueApp = {
     '    <option disabled value="">new plot (select type)</option>' +
     '    <option value="graph">graph y=f(x)</option>' +
     '    <option value="graph_inverted">graph x=f(y)</option>' +
+    '    <option value="implicit">level curve f(x,y)=0</option>' +
     '    <option value="ode_equation">ODE equation</option>' +
     '    <option value="ode_system">ODE system</option>' +
     '  </select>' +
@@ -39,6 +40,8 @@ vueApp = {
         panel = new GraphPanel({parent: this});
       } else if (val === "graph_inverted") {
         panel = new GraphPanel({parent: this, propsData: {inverted: true}});
+      } else if (val === "implicit") {
+        panel = new LevelPanel({parent: this, propsData: {zero: true}});
       } else if (val === "ode_equation") {
         panel = new OdePanel({
           parent: this,
