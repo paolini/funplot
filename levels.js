@@ -81,7 +81,7 @@ const levelPanel = {
     },
     click: function(coords) {
       if (this.compiled_expr) {
-        var z = this.compiled_expr.eval({'x': x, 'y': y});
+        var z = this.compiled_expr.eval({'x': coords.x, 'y': coords.y});
         this.levels.push(z);
         this.update();
       }
@@ -100,13 +100,6 @@ Vue.component("levelPanel", levelPanel);
 const LevelPanel = Vue.extend(levelPanel);
 
 function levelPlot(plot, f, levels, options) {
-  var xmin = plot.x_pixel(0);
-  var ymin = plot.y_pixel(plot.height);
-  var xmax = plot.x_pixel(plot.width);
-  var ymax = plot.y_pixel(0);
-  const pixel_eps = 10 * plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
-  const L = 50 * pixel_eps;
-
   var squares = [{}];
   // list of squares. Only add: index is identifier
   // index 0 is invalid
@@ -118,7 +111,7 @@ function levelPlot(plot, f, levels, options) {
   function find_adjacent(square, j, t) {
     // find the smallest children
     // of the adjacent square containing
-    // the point in direction j parametrized
+    // the point on the side in direction j parametrized
     // with t starting from 0.0 to 1.0 in
     // counter-clockwise direction
     var square_n = square.adjacent[j];
@@ -160,29 +153,6 @@ function levelPlot(plot, f, levels, options) {
     return square_n;
   }
 
-  function set_refine(square) {
-    if (square.children[0]) { // non-terminal
-      console.assert(square.flag === 0);
-      return;
-    }
-    if (square.l <= pixel_eps) { // sufficiently small
-      console.assert(square.flag === 0);
-      return;
-    }
-    if (square.flag) return; // already set
-    for (var j=0;j<4;++j) {
-      if (sign_change(square.z[(j+3)%4],square.z[j])) {
-        square.flag = 1;
-        if (square.adjacent[j]) {
-          var adjacent = find_adjacent(square, j, 0.5);
-          if (adjacent.depth < square.depth) {
-            adjacent.flag = 1;
-          }
-        }
-      }
-    }
-  }
-
   function check_z(square) {
     var x = square.x;
     var y = square.y;
@@ -199,20 +169,22 @@ function levelPlot(plot, f, levels, options) {
     var l = 0.5*square.l;
     var center_z = f(x+ l, y+l);
     var mid_z = [f(x+2.0*l,y+l), f(x+l,y+2.0*l), f(x,y+l), f(x+l,y)];
+    var children = [{},{},{},{}];
     for (var j=0;j<4;++j) {
-      var child = {};
+      var child = children[j];
       console.assert(!square.children[j]);
       child.x = x + [1.0,0.0,0.0,1.0][j] * l;
       child.y = y + [1.0,1.0,0.0,0.0][j] * l;
       child.depth = square.depth + 1;
       child.l = l;
-      child.adjacent = [
-        j==1?first+0:(j==2?first+3:square.adjacent[0]),
-        j==2?first+1:(j==3?first+0:square.adjacent[1]),
-        j==3?first+2:(j==0?first+1:square.adjacent[2]),
-        j==0?first+3:(j==1?first+2:square.adjacent[3])];
-      // it is possible that adjacent is larger and has children
-      // which are closer to this square
+      child.adjacent = [0,0,0,0];
+      var m;
+      m = square.adjacent[j];
+      child.adjacent[j] = m && (squares[m].children[(j+1)%4] || m);
+      m = square.adjacent[(j+1)%4];
+      child.adjacent[(j+1)%4] = m && (squares[m].children[(j+3)%4] || m);
+      child.adjacent[(j+2)%4] = first + (j+1)%4;
+      child.adjacent[(j+3)%4] = first + (j+3)%4;
       child.children = [0,0,0,0];
       child.flag = 0;
       // reuse already computed z-values
@@ -225,10 +197,27 @@ function levelPlot(plot, f, levels, options) {
       if (true) { // debugging
         check_z(child);
       }
-
-      console.assert(squares.length == first + j)
-      squares.push(child);
+    }
+    for (var j=0;j<4;++j) {
+      console.assert(squares.length == first + j);
+      squares.push(children[j]);
       square.children[j] = first + j;
+    }
+    // update reverse adjacent relation
+    for (var j=0;j<4;++j) {
+      var child = squares[first+j];
+      for (var k=0;k<4;++k) {
+        var adj_n = child.adjacent[k];
+        if (adj_n && adj_n < first) {
+          var adj = squares[adj_n];
+          var kk = (k+2)%4;
+          if (adj.depth == child.depth) {
+            console.assert(squares[adj.adjacent[kk]].depth == square.depth);
+            adj.adjacent[kk] = first+j;
+          }
+        }
+        console.assert(child.adjacent[k] < squares.length);
+      }
     }
   }
 
@@ -241,11 +230,12 @@ function levelPlot(plot, f, levels, options) {
     // (1-t) * z0 + t * z1 = 0.0
     // t * (z1-z0) + z0 = 0.0
     var t = z0 / (z0-z1);
-    var x0 = square.x + (j<2?square.l:0.0);
-    var x1 = square.x + (j==0 || j==3 ? square.l:0.0);
+    var l = square.l;
+    var x0 = square.x + [1.0,1.0,0.0,0.0][j]*l;
+    var x1 = square.x + [1.0,0.0,0.0,1.0][j]*l;
     var x = (1.0 - t)*x0 + t*x1;
-    var y0 = square.y + (j==0 || j==3 ? square.l:0.0);
-    var y1 = square.y + (j<2?square.l:0.0);
+    var y0 = square.y + [0.0,1.0,1.0,0.0][j]*l;
+    var y1 = square.y + [1.0,1.0,0.0,0.0][j]*l;
     var y = (1.0 - t)*y0 + t*y1;
     return [x,y,t];
   }
@@ -264,29 +254,43 @@ function levelPlot(plot, f, levels, options) {
     if (flag & (1<<k)) return k;
     k = (j+1)%4;
     if (flag & (1<<k)) return k;
-    k = (k+3)%4;
+    k = (j+3)%4;
     if (flag & (1<<k)) return k;
     return 4;
   }
 
   // step 1. Construct equal squares of side L
 
+  var xmin = plot.x_pixel(0);
+  var ymin = plot.y_pixel(plot.height);
+  var xmax = plot.x_pixel(plot.width);
+  var ymax = plot.y_pixel(0);
+  var pixel_eps = 60 * plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
+  var L = 10 * pixel_eps;
+
+  if (false) { // debugging
+    pixel_eps = 0.1;
+    L = 1.6;
+    xmin = -4;
+    ymin = -1;
+  }
+
   var square_south = 0;
   var square_west = 0;
   var first_square_in_row = 0;
 
-  for (var y = ymin; y<ymax-L; y += L) {
+  for (var y = ymin; y<ymax; y += L) {
     square_south = first_square_in_row;
     first_square_in_row = squares.length;
     square_west = 0;
-    for (var x = xmin; x<xmax-L; x += L) {
+    for (var x = xmin; x<xmax; x += L) {
       var square = {}; // new square
       var n = squares.length; // identifier of new square
       square.x = x; // left side
       square.y = y; // lower side
       square.depth = 0; // depth in hierarchy
       square.l = L; // side length l = L / 2^depth
-      square.adjacent = [0,0,0,0]; // E, N, W, S adjacent squares
+      square.adjacent = [0,0,0,0]; // E, N, W, S adjacent squares (smaller adjacent square of equal or larger size)
       square.children = [0,0,0,0]; // NE, NW, SW, SE internal subdivision
       square.flag = 0; // flag used during refinement & drawing
       square.z = [0.0,0.0,0.0,0.0]; // value of function in vertices: NE, NW, SW, SE
@@ -321,20 +325,29 @@ function levelPlot(plot, f, levels, options) {
     // using square.flag and assuming it is initially 0
     var terminate = true;
     for (var n=1; n<squares.length; ++n) {
-        // the following function sets the flag
-        // of the given square and maybe also adjacent ones
-        set_refine(squares[n]);
-        if (squares[n].flag) terminate = false;
+        var square = squares[n];
+        if (square.children[0]) continue; // not a terminal square
+        for (var j=0;j<4;++j) {
+          if (sign_change(square.z[(j+3)%4],square.z[j])) {
+            square.flag = 1;
+            if (square.adjacent[j]) {
+              var adjacent = squares[square.adjacent[j]];
+              if (adjacent.depth <= square.depth && !(adjacent.children[0])) adjacent.flag = 1;
+            }
+          }
+        }
     }
-    if (terminate) break; // no square needs refinement
 
     // step 2b. refine squares which need to be refined
+    var done = true;
     for (var n=1; n<squares.length; ++n) {
-      if (squares[n].flag) {
+      if (squares[n].flag && squares[n].l > pixel_eps && (squares[n].children[0]===0)) {
         refine(squares[n]);
-        squares[n].flag = 0;
+        done = false;
       }
+      squares[n].flag = 0;
     }
+    if (done) break;
   }
 
   // step 3. draw curve loops
@@ -357,6 +370,25 @@ function levelPlot(plot, f, levels, options) {
       }
     }
   }
+
+  // draw squares
+  if (true) {
+    for (var n=1; n<squares.length;++n) {
+      var square = squares[n];
+      var x = square.x;
+      var y = square.y;
+      var l = square.l;
+      plot.ctx.beginPath();
+      plot.moveTo(x, y);
+      plot.lineTo(x+l,y);
+      plot.lineTo(x+l,y+l);
+      plot.lineTo(x,y+l);
+      plot.ctx.closePath();
+      plot.ctx.stroke();
+    }
+    plot.ctx.strokeStyle = "#f00";
+  }
+
 
   // step 3b: draw level lines
   for (var n=1;n<squares.length;++n) {
