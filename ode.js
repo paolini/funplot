@@ -62,6 +62,39 @@ const odePanel = {
     slope_color: function() {this.$parent.draw_to_canvas()}
   },
   methods: {
+    get_params: function() {
+      var params;
+      if (this.system) {
+        params = {
+          t: "ode_system",
+          ex: this.expr_x,
+          ey: this.expr_y,
+          da: this.draw_arrow
+        };
+      } else {
+        params = {
+          t: "ode_equation",
+          e: this.expr,
+        };
+      }
+      params.c = this.plot_color.hex;
+      params.sc = this.slope_color.hex;
+      params.ds = this.draw_slope;
+      params.gp = this.grid_points;
+      params.l = this.points;
+      return params;
+    },
+    set_params: function(params) {
+      if (params.e) this.expr = params.e;
+      if (params.ex) this.expr_x = params.ex;
+      if (params.ey) this.expr_y = params.ey;
+      this.plot_color.hex = params.c;
+      this.slope_color.hex = params.sc;
+      this.draw_slope = params.ds;
+      this.grid_points = params.gp;
+      this.points = params.l;
+      this.update();
+    },
     update: function() {
       this.expr_compilation_error = "";
       this.expr_x_compilation_error = "";

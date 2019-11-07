@@ -60,7 +60,19 @@ const graphPanel = {
       });
       this.active = true;
     },
-    click: function() {}
+    click: function() {},
+    get_params: function() {
+      return {
+        t: this.inverted?"graph_inverted":"graph",
+        e: this.expr,
+        c: this.plot_color.hex
+      };
+    },
+    set_params: function(params) {
+      this.expr = params.e;
+      this.plot_color.hex = params.c;
+      this.update();
+    }
   },
   created() {
     if (this.expr === "") {

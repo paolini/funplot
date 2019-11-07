@@ -13,6 +13,20 @@ function Plot(options) {
     this.ctx = null;
 }
 
+Plot.prototype.get_params = function() {
+  return {
+    x: this.xCenter,
+    y: this.yCenter,
+    r: this.radius };
+}
+
+Plot.prototype.set_params = function(params) {
+  this.xCenter = params.x;
+  this.yCenter = params.y;
+  this.radius = params.r;
+  if (this.canvas) this.setCanvas(this.canvas);
+}
+
 Plot.prototype.resize = function(width, height) {
   this.width = width;
   this.height = height;

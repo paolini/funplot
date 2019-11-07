@@ -60,6 +60,18 @@ const levelPanel = {
       });
       this.$parent.draw_to_canvas();
     },
+    get_params: function() {
+      return {
+        t: "implicit",
+        e: this.expr,
+        c: this.plot_color.hex
+      };
+    },
+    set_params: function(params) {
+      this.expr = params.e;
+      this.plot_color.hex = params.c;
+      this.update();
+    },
     draw: function(plot) {
       var f;
       var that = this;

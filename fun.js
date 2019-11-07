@@ -12,6 +12,7 @@ vueApp = {
     '    <option value="ode_equation">ODE equation</option>' +
     '    <option value="ode_system">ODE system</option>' +
     '  </select>' +
+    ' <button @click="update_url()" class="update_url_button">update URL</button>' +
     ' <br />' +
     '  x=<span v-html="x">...</span>, y=<span v-html="y">...</span><br />' +
     '<canvas ref="canvas" width="640" height="480"></canvas>' +
@@ -33,6 +34,12 @@ vueApp = {
     },
   watch: {
     new_plot: function(val) {
+      this.add_panel(val);
+      this.new_plot = "";
+    }
+  },
+  methods: {
+    add_panel: function(val, params) {
       var panel;
       if (val === "") {
         return; // deselected!
@@ -60,11 +67,9 @@ vueApp = {
         });
         this.$refs.plots.appendChild(panel.$el);
         panel.active = true;
+        if (params) panel.set_params(params);
       }
-      this.new_plot = "";
-    }
-  },
-  methods: {
+    },
     mouseclick: function(event) {
       var coords = this.plot.mouse_coords(event);
       this.$children.forEach(function(panel){
@@ -85,6 +90,30 @@ vueApp = {
       canvas.width = window.innerWidth - 10;
       this.plot.setCanvas(canvas);
       this.draw(this.plot);
+    },
+    update_url: function() {
+      var opt = {};
+      opt.p = this.plot.get_params();
+      var panels = [];
+      this.$children.forEach(function(panel) {
+        panels.push(panel.get_params());
+      });
+      opt.l = panels;
+      var hash = "#q=";
+      hash += encodeURIComponent(JSON.stringify(opt));
+      history.replaceState(undefined, undefined, hash);
+    },
+    load_from_hash: function() {
+      var hash = window.location.hash;
+      if (hash.substring(0,3) !== "#q=") return;
+      hash = hash.substring(3);
+      var opt = decodeURIComponent(hash);
+      opt = JSON.parse(opt);
+      this.plot.set_params(opt.p);
+      var that = this;
+      opt.l.forEach(function(params) {
+        that.add_panel(params.t, params);
+      });
     }
   },
   mounted: function() {
@@ -95,6 +124,7 @@ vueApp = {
       radius: Math.sqrt(320*320 + 240*240) / 80
     });
     var canvas = this.$refs.canvas;
+    this.load_from_hash();
     this.plot.setCanvas(canvas);
     this.draw_to_canvas();
     window.addEventListener("resize", this.draw_to_canvas);
