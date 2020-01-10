@@ -13,6 +13,7 @@ vueApp = {
     '    <option value="ode_system">ODE system</option>' +
     '  </select>' +
     ' <button @click="update_url()" class="update_url_button">update URL</button>' +
+    ' <button @click="export_pdf()">PDF export</button>' +
     ' <br />' +
     '  x=<span v-html="x">...</span>, y=<span v-html="y">...</span><br />' +
     '<canvas ref="canvas" width="640" height="480"></canvas>' +
@@ -114,6 +115,13 @@ vueApp = {
       opt.l.forEach(function(params) {
         that.add_panel(params.t, params);
       });
+    },
+    export_pdf: function() {
+      var plot = new Plot({clone: this.plot});
+      var canvas = this.$refs.canvas;
+      plot.setPdf(canvas.width/10, canvas.height/10);
+      this.draw(plot);
+      plot.ctx.save("funplot.pdf");
     }
   },
   mounted: function() {

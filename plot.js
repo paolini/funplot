@@ -1,7 +1,13 @@
 function Plot(options) {
-    this.xCenter = options.xCenter;
-    this.yCenter = options.yCenter;
-    this.radius = options.radius;
+    if (options.clone) {
+      this.xCenter = options.clone.xCenter;
+      this.yCenter = options.clone.yCenter;
+      this.radius = options.clone.radius;
+    } else {
+      this.xCenter = options.xCenter;
+      this.yCenter = options.yCenter;
+      this.radius = options.radius;
+    }
     this.scale = Math.sqrt(320*320 + 240*240) / options.radius;
     this.x0 = 320 - options.xCenter * this.scale;
     this.y0 = 240 + options.yCenter * this.scale;

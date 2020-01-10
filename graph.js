@@ -98,6 +98,8 @@ function funGraph(plot, func, inverted) {
   var dx = eps;
   var count = 0;
   var xend = inverted?ref.yMax:ref.xMax;
+  var ymin = inverted?ref.xMin:ref.yMin;
+  var ymax = inverted?ref.xMax:ref.yMax;
   while(x<xend) {
     var xx = x+dx;
     var yy = func(xx);
@@ -107,7 +109,10 @@ function funGraph(plot, func, inverted) {
       continue;
     }
     var dy = Math.abs(yy - y);
-    if (dy > eps*100) {
+    if  ((y<ymin || y>ymax) && (yy<ymin || yy>ymax)) {
+      y = yy;
+      x = xx;
+    } else if (dy > eps*100) {
       inverted?plot.moveTo(yy,xx):plot.moveTo(xx,yy);
       y = yy;
       x = xx;
