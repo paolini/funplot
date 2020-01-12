@@ -107,6 +107,10 @@ function funGraph(plot, func, inverted) {
     var yy = func(xx);
     if (isNaN(y) || isNaN(yy)) {
       need_move = 1;
+    } else if (yy>ymax && y > ymax) {
+      need_move = 1;
+    } else if (yy<ymin && y < ymin) {
+      need_move = 1;
     } else {
       var dy = yy-y;
       if (Math.abs(dy) > pix) {
@@ -151,11 +155,34 @@ function funGraph(plot, func, inverted) {
         need_move = 1;
       } else {
         if (need_move) {
-          inverted?plot.moveTo(y,x):plot.moveTo(x,y);
+          var xxx = x;
+          var yyy = y;
+          if (y > ymax) {
+            yyy = ymax;
+            xxx = x + (yyy-y)/(yy-y)*(xx-x);
+          } else if (y<ymin) {
+            yyy = ymin;
+            xxx = x + (yyy-y)/(yy-y)*(xx-x);
+          }
+          inverted?plot.moveTo(yyy,xxx):plot.moveTo(xxx,yyy);
         }
-        inverted?plot.lineTo(yy, xx):plot.lineTo(xx, yy);
-        need_move = 0;
-        count ++;
+        if (1) {
+          var xxx = x;
+          var yyy = y;
+          if (yy > ymax) {
+            yyy = ymax;
+            xxx = xx + (yyy-yy)/(y-yy)*(x - xx);
+            need_move = 1;
+          } else if (yy < ymin) {
+            yyy = ymin;
+            xxx = xx + (yyy-yy)/(y-yy)*(x - xx);
+            need_move = 1;
+          } else {
+            need_move = 0;
+          }
+          inverted?plot.lineTo(yyy, xxx):plot.lineTo(xxx, yyy);
+          count ++;
+        }
       }
     }
     y = yy;

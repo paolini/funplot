@@ -3,15 +3,17 @@ function PdfCtx(width, height) {
   var doc = new jsPDF({
     unit: 'pt',
     format: [width+2*margin, height+2*margin],
-    orientation: (height > width ? 'p' : 'l') });
-
+    orientation: (height > width ? 'p' : 'l')
+  });
+  doc.setLineJoin('rounded');
 //  doc.line(20, 20, 60, 20) // horizontal line
 
 
   //doc.setLineWidth(0.5)
   this.doc = doc;
   this.ctx = doc.context2d;
-  this.ctx.autoPaging = 'false';
+  this.ctx.autoPaging = 0;
+  console.log("autopaging: " + this.ctx.autoPaging);
   this.ctx.lineWidth = 2.0;
   this.ctx.translate(margin,margin);
   this.ctx.scale(1.0,1.0);
