@@ -86,16 +86,18 @@ const GraphPanel = Vue.extend(graphPanel);
 
 function funGraph(plot, func, inverted) {
   var ref = plot.getReference();
-  var eps = inverted?
-    2.0*(ref.yMax - ref.yMin)/ref.heightPx:
-    2.0*(ref.xMax - ref.xMin)/ref.widthPx;
+  var pix = inverted?
+    (ref.yMax - ref.yMin)/ref.heightPx:
+    (ref.xMax - ref.xMin)/ref.widthPx;
 
   plot.ctx.beginPath();
 
   var x = inverted?ref.yMin:ref.xMin;
   var y = func(x);
-  inverted?plot.moveTo(y,x):plot.moveTo(x,y);
-  var dx = eps;
+  var need_move = 1;
+  var max_dx = pix;
+  var min_dx = pix/10;
+  var dx = max_dx;
   var count = 0;
   var xend = inverted?ref.yMax:ref.xMax;
   var ymin = inverted?ref.xMin:ref.yMin;
@@ -103,28 +105,61 @@ function funGraph(plot, func, inverted) {
   while(x<xend) {
     var xx = x+dx;
     var yy = func(xx);
-    if (isNaN(yy)) {
-      dx = eps;
-      x = xx;
-      continue;
-    }
-    var dy = Math.abs(yy - y);
-    if  ((y<ymin || y>ymax) && (yy<ymin || yy>ymax)) {
-      y = yy;
-      x = xx;
-    } else if (dy > eps*100) {
-      inverted?plot.moveTo(yy,xx):plot.moveTo(xx,yy);
-      y = yy;
-      x = xx;
-    } else if (dy < eps || dx < eps*0.01) {
-      inverted?plot.lineTo(yy, xx):plot.lineTo(xx, yy);
-      count ++;
-      y = yy;
-      x = xx;
-      if (dy < eps*0.5 && dx < eps) dx *= 2.0;
+    if (isNaN(y) || isNaN(yy)) {
+      need_move = 1;
     } else {
-      dx *= 0.5;
+      var dy = yy-y;
+      if (Math.abs(dy) > pix) {
+        // refine dx step
+        if (dx > min_dx) {
+          dx = 0.5 * dx;
+          continue;
+        }
+      } else {
+        if (dx < max_dx) dx = 2.0 * dx;
+      }
+      var i = 0;
+      const ITER=10;
+      if (Math.abs(dy)>pix) {
+        // use bisection to decide if there is jump discontinuity
+        var a = x;
+        var b = xx;
+        var ya = y;
+        var yb = yy;
+        var ymid = 0.5*(y+yy);
+        for (i=0;i<ITER;++i) {
+          var c = 0.5*(a+b);
+          var y1 = func(c);
+          if (isNaN(y1)) {
+            i = ITER;
+            break;
+          }
+          if (Math.abs(y1-ymid) < pix) {
+            break;
+          }
+          if ((ya <= ymid && y1 >= ymid) || (ya>=ymid && y1 <=ymid)) {
+            b = c;
+            yb = y1;
+          } else {
+            a = c;
+            ya = y1;
+          }
+        }
+      }
+      if (i>=ITER) {
+        // jump detected
+        need_move = 1;
+      } else {
+        if (need_move) {
+          inverted?plot.moveTo(y,x):plot.moveTo(x,y);
+        }
+        inverted?plot.lineTo(yy, xx):plot.lineTo(xx, yy);
+        need_move = 0;
+        count ++;
+      }
     }
+    y = yy;
+    x = xx;
   }
   plot.ctx.stroke();
 }
