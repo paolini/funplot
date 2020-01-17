@@ -114,31 +114,53 @@ Plot.prototype.drawAxes = function() {
     var pixel_y
     var pixel_x;
     pixel_y = this.pixel_y(0);
+    var tick_dir = 1; // ticks go above
+    var text_dir = -1; // text goes below
+    if (pixel_y<0) {
+      pixel_y=0;
+      tick_dir = -1;
+    }
+    if (pixel_y>this.height) {
+      pixel_y=this.height;
+      text_dir = 1;
+    }
     this.ctx.textAlign = "center"
     for (var i = Math.floor(this.x_pixel(0)/dx*10)+1; i<this.x_pixel(this.width)/dx*10; i++) {
       if (i==0) continue;
       pixel_x = this.pixel_x(i*dx/10);
       this.ctx.beginPath();
       this.ctx.moveTo(pixel_x,pixel_y);
-      this.ctx.lineTo(pixel_x,pixel_y - (i%10==0 ? 6 : (i%5 == 0) ? 4:2));
+      this.ctx.lineTo(pixel_x,pixel_y - tick_dir * (i%10==0 ? 6 : (i%5 == 0) ? 4:2));
       this.ctx.stroke();
       if (i%10 == 0) {
-        this.ctx.fillText(round(i*dx/10), pixel_x, pixel_y+10.0);
+        this.ctx.fillText(round(i*dx/10), pixel_x, pixel_y-text_dir*10.0);
       }
     }
 
+    tick_dir = 1; // ticks on right hand side
+    text_dir = -1; // text on left hand side
     pixel_x = this.pixel_x(0);
-    this.ctx.textAlign = "right"
+    this.ctx.textAlign = "right";
+    if (pixel_x<0) {
+      pixel_x = 0;
+      text_dir = 4;
+      this.ctx.textAlign = "left";
+    }
+    if (pixel_x>this.width) {
+      pixel_x=this.width;
+      tick_dir = -1;
+      text_dir = -4
+    }
     for (var i = Math.floor(this.y_pixel(this.height)/dx*10)+1; i<this.y_pixel(0)/dx*10; i++) {
       if (i==0) continue;
       pixel_y = this.pixel_y(i*dx/10);
       this.ctx.beginPath();
       this.ctx.moveTo(pixel_x,pixel_y);
-      this.ctx.lineTo(pixel_x + (i%10==0 ? 6 : (i%5 == 0) ? 4:2), pixel_y);
+      this.ctx.lineTo(pixel_x + tick_dir * (i%10==0 ? 6 : (i%5 == 0) ? 4:2), pixel_y);
       this.ctx.stroke();
       if (i%10 == 0) {
         // ugly hack to get (hopefully!) correct digits
-        this.ctx.fillText(round(i*dx/10), pixel_x-2, pixel_y+3);
+        this.ctx.fillText(round(i*dx/10), pixel_x+text_dir*2, pixel_y+3);
       }
     }
 };
