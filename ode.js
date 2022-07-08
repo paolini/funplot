@@ -253,6 +253,10 @@ function odePlot(plot, fx, fy, x0, y0, options) {
       var dy = fy(x, y);
       if (isNaN(dx) || isNaN(dy)) break;
       var l = dt / Math.sqrt(dx*dx + dy*dy);
+      
+      // useful with equations like y'=1/cos(y)
+      if (equation && Math.abs(dy) > plot.height) break;
+
       if (l>2 && !equation) break;
       var r = dir * l;
       xx = x + r * dx;
