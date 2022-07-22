@@ -84,12 +84,16 @@ vueApp = {
         panel.draw(plot);
       });
     },
-    draw_to_canvas: function() {
+    resize_canvas: function() {
       var canvas = this.$refs.canvas;
       var bottom = this.$refs.bottom;
       canvas.height = bottom.offsetTop - canvas.offsetTop;
       canvas.width = window.innerWidth - 10;
       this.plot.setCanvas(canvas);
+    },
+    draw_to_canvas: function() {
+      // this.resize_canvas();
+      this.plot.setCanvas(this.$refs.canvas)
       this.draw(this.plot);
     },
     update_url: function() {
@@ -134,8 +138,9 @@ vueApp = {
     var canvas = this.$refs.canvas;
     this.load_from_hash();
     this.plot.setCanvas(canvas);
+    this.resize_canvas();
     this.draw_to_canvas();
-    window.addEventListener("resize", this.draw_to_canvas);
+    // window.addEventListener("resize", this.draw_to_canvas);
 
     canvas.addEventListener("mousedown", function(evt) {
       document.body.style.mozUserSelect =
