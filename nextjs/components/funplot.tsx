@@ -1,142 +1,13 @@
 'use client'
 import {useState } from 'react'
 import { HexColorPicker } from "react-colorful"
-import { compile, parse } from 'mathjs'
 import assert from 'assert'
 
 import { ContextWrapper } from '@/lib/plot'
-import funGraph from '@/lib/funGraph'
-import levelPlot from '@/lib/levels'
 import { get, set, getField, update, map, extract, onChange, State, SetState } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
-
-interface GraphFigureState {
-    type: 'graph'
-    color: string
-    inverted: boolean
-    expr: string
-}
-
-interface ImplicitFigureState {
-    type: 'implicit'
-    color: string
-    expr: string
-}
-
-type FigureState = GraphFigureState|ImplicitFigureState
-
-interface Figure {
-    state: FigureState
-    plot: (ctx: ContextWrapper) => void
-    htmlElement: React.ReactElement
-}
-
-function figure(state: FigureState): Figure {
-    switch(state.type) {
-        case 'graph':
-            return graphFigure(state)
-        case 'implicit':
-            return implicitFigure(state)
-//        default:
-//            return errorFigure(state, `unknown figure type ${state.type}`)
-    }
-}
-
-function errorFigure(state: FigureState, error: string): Figure {
-    return {
-        state,
-        plot: (ctx: ContextWrapper) => {},
-        htmlElement: <span className="error">{error}</span>,
-    }
-}
-
-function graphFigure(state: GraphFigureState): Figure {
-    let fun: ((x:number) => number) | null = null
-    let errors: string[] = []
-    let formulaHtml = ''
-    try {
-        const compiledExpr = compile(state.expr)
-        if (state.inverted) {
-            fun = y => compiledExpr.evaluate({y})
-        } else {
-            fun = x => compiledExpr.evaluate({x})
-        }
-        console.log(`compiled? ${state.expr} fun(0)=${fun(0)}`)
-        fun(0) // try if it is working
-    } catch(e) {
-        errors.push(`${e}`)
-    }
-    try {
-        formulaHtml = `$$ ${state.inverted ? 'x' : 'y'} = ${parse(state.expr).toTex()} $$`
-        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
-    } catch(e) {
-        errors.push(`${e}`)
-    }
-
-    if (errors) {
-        formulaHtml = `<span class="error">${errors.join('<br/>')}</span>`
-    }
-
-    function plot(ctx: ContextWrapper) {
-        ctx.ctx.strokeStyle = state.color
-        console.log(`panel plot color ${state.color}`)
-        if (fun) {
-            try {
-                funGraph(ctx, fun, state.inverted)
-            } catch(e) {
-                console.error(e)
-            }    
-        }
-    }
-
-    return {
-        state,
-        plot,
-        htmlElement: <span className="formula" dangerouslySetInnerHTML={{__html: formulaHtml}} />,
-    }
-}
-
-function implicitFigure(state: ImplicitFigureState): Figure {
-    let fun: ((x:number, y:number) => number) | null = null
-    let errors: string[] = []
-    let formulaHtml = ''
-    try {
-        const compiledExpr = compile(state.expr)
-        fun = (x,y) => compiledExpr.evaluate({x, y})
-        console.log(`compiled? ${state.expr} fun(0,0)=${fun(0,0)}`)
-        fun(0,0) // try if it is working
-    } catch(e) {
-        errors.push(`${e}`)
-    }
-    try {
-        formulaHtml = `$$ ${parse(state.expr).toTex()} = 0 $$`
-        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
-    } catch(e) {
-        errors.push(`${e}`)
-    }
-
-    if (errors) {
-        formulaHtml = `<span class="error">${errors.join('<br/>')}</span>`
-    }
-
-    function plot(ctx: ContextWrapper) {
-        ctx.ctx.strokeStyle = state.color
-        if (fun) {
-            try {
-                levelPlot(ctx, fun)
-            } catch(e) {
-                console.error(e)
-            }    
-        }
-    }
-
-    return {
-        state,
-        plot,
-        htmlElement: <span className="formula" dangerouslySetInnerHTML={{__html: formulaHtml}} />,
-    }
-}
+import { FigureState, GraphFigureState, ImplicitFigureState, figure } from '@/lib/figures'
 
 interface IPanel {
     key: string,
@@ -179,6 +50,28 @@ function newState(value: string): FigureState {
             type: 'implicit',
             color: '#00f',
             expr: 'x^4-x^2+y^2',
+        }
+        case 'ode_equation': return {
+            type: 'ode',
+            color: "#4A90E2",
+            slopeColor: "#7ED321",
+            expr: "y^2+x",
+            drawSlope: false,
+            gridPoints: true,
+            gridCount: 20,
+            points: [],
+        }
+        case 'ode_system': return {
+            type: 'system',
+            exprX: "y",
+            exprY: "-sin(x)-y",
+            color: "#4A90E2",
+            slopeColor: "#7ED321",
+            drawSlope: false,
+            drawArrows: true,
+            gridPoints: true,
+            gridCount: 20,
+            points: [],
         }
     }
     assert(false,`invalid figure type ${value}`)
