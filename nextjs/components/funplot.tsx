@@ -1,12 +1,40 @@
 'use client'
-import {useRef, useState, useEffect, SetStateAction, useMemo} from 'react'
+import {useRef, useState, useEffect, SetStateAction, Dispatch, MouseEvent, UIEvent, WheelEvent} from 'react'
 import assert from 'assert'
-import type { Color } from '@rc-component/color-picker';
-import ColorPicker, { ColorBlock } from '@rc-component/color-picker';
-import Trigger from '@rc-component/trigger';
+import { HexColorPicker } from "react-colorful"
 
 import Plot from '@/lib/plot'
-import builtinPlacements from '@/lib/placements';
+
+// [value, setValue] pairs
+type State<T> = [T, (cb: (newValue: T) => T) => void]
+
+// get the value of a state [value, setValue]
+function get<T>([value, setValue]: State<T>): T {
+    return value
+}
+
+// get the field of a state [value, setValue]
+function getField<T,K extends keyof T>([value, setValue]: State<T>, field: K): State<T[K]> {
+    return [value[field], (cb: (newValue: T[K]) => T[K]) => setValue(value => ({...value, [field]: cb(value[field])}))]
+}
+
+// set the value of a state [value, setValue]
+// with a constant value 
+function set<T>([value, setValue]: State<T>, newValue: T) {
+    setValue(() => newValue)
+}
+
+// set the value of a state [value, setValue]
+// with a function of the current value
+function update<T>([value, setValue]: State<T>, cb: (newValue: T) => T) {
+    setValue(cb)
+}
+
+// map a function over a state [value, setValue]
+// building the setState function for each element of the array
+function map<T,U>([value, setValue]: State<T[]>, f: (item: State<T>, i: number) => U): U[] {
+    return value.map((item,i) => f([item, (setItem: (x:T)=> T) => setValue(value => value.map(item2 => item2===item ? setItem(item2) : item2))],i))
+}
 
 type Coords = {
     x: number
@@ -21,6 +49,7 @@ type GraphFigure = {
 type Figure = GraphFigure
 
 interface Panel {
+    key: string,
     figure: Figure,
     active: boolean,
 }
@@ -34,16 +63,18 @@ function clickFigure(figure: Figure, coords: Coords) {
 }
 
 export default function Funplot() {
-    const [coords, setCoords] = useState<Coords>({x: NaN, y: NaN})
-    const [panels, setPanels] = useState<Panel[]>([])
+    const coords = useState<Coords>({x: NaN, y: NaN})
+    const panels = useState<Panel[]>([])
 
     function newPanel(value: string) {
         console.log(`newPanel: ${value}`)
-        setPanels(panels => [...panels, {
-            figure: {
-                type: 'graph',
-                color: '#f00',
-            },
+        const figure: Figure = {
+            type: 'graph',
+            color: '#f00',
+        }
+        update(panels, panels => [...panels, {
+            figure,
+            key: Math.random().toString(36).substring(7),
             active: true,
         }])
     }
@@ -51,7 +82,7 @@ export default function Funplot() {
     return <main className="flex flex-col flex-1 bg-blue-500">
       <h1 className="">Funplot</h1>
       <div className="block">
-        { panels.map((panel,i) => <Panel key={i} panel={panel} />) }
+        { map(panels, panel => <Panel key={get(panel).key} panel={panel} />) }
         <select value="" className="border" onChange={evt => newPanel(evt.target.value)}>
             <option value="">new plot</option>
             <option value="graph">graph y=f(x)</option>
@@ -62,19 +93,18 @@ export default function Funplot() {
         </select>
       </div>
       <div className="block">    
-        <span>x={coords.x}</span>, <span>y={coords.y}</span>
+        <span>x={get(coords).x}</span>, <span>y={get(coords).y}</span>
       </div>
       <div className="flex-1 border-2 border-black h-8 bg-white">  
-        <Canvas coords={coords} setCoords={setCoords} panels={panels} />
+        <Canvas coords={coords} panels={panels} />
       </div>
       </main>
   }
 
-  function Canvas({coords, setCoords, panels}
+  function Canvas({coords, panels}
     :{
-        coords:Coords, 
-        setCoords: React.Dispatch<SetStateAction<Coords>>,
-        panels: Panel[]
+        coords: State<Coords>, 
+        panels: State<Panel[]>
     }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [plot, setPlot] = useState<Plot|null>(null)
@@ -102,7 +132,7 @@ export default function Funplot() {
     function draw(plot: Plot) {
         plot.clear();
         plot.drawAxes();
-        panels.forEach(panel => drawFigure(panel.figure, plot))
+        map(panels, panel => drawFigure(get(panel).figure, plot))
     }
 
     function drawToCanvas() {
@@ -111,7 +141,7 @@ export default function Funplot() {
         draw(plot);
     }
 
-    type MyMouseEvent = React.MouseEvent<HTMLCanvasElement>
+    type MyMouseEvent = MouseEvent<HTMLCanvasElement>
 
     function onMouseDown(evt: MyMouseEvent) {
         if (!plot) return
@@ -128,7 +158,7 @@ export default function Funplot() {
           plot.translate(dragStart.x-pos.x, dragStart.y-pos.y)
           drawToCanvas()
         }
-        setCoords({x: pos.x, y: pos.y})
+        set(coords, {x: pos.x, y: pos.y})
         setMoved(true)
     }
   
@@ -136,8 +166,8 @@ export default function Funplot() {
         if (!plot) return
         const pos = plot.mouse_coords(evt);
         if (!moved) { // it's a click!
-            panels.forEach(panel => {
-                if (panel.active) clickFigure(panel.figure, pos)
+            map(panels, panel => {
+                if (get(panel).active) clickFigure(get(panel).figure, pos)
             })
         }
         setMoved(false)
@@ -151,16 +181,16 @@ export default function Funplot() {
         drawToCanvas()
     }
 
-    function onScroll(evt: React.UIEvent<HTMLCanvasElement>) {
+    function onScroll(evt: UIEvent<HTMLCanvasElement>) {
         console.log('onScroll')
         if (!plot) return
         const pos = plot.mouse_coords(evt)
         zoom(-evt.detail, pos.x, pos.y)
     }
 
-    function onWheel(evt: React.WheelEvent<HTMLCanvasElement>) {
+    function onWheel(evt: WheelEvent<HTMLCanvasElement>) {
         var delta = evt.deltaY/40 
-        zoom(delta, coords.x, coords.y)
+        zoom(delta, get(coords).x, get(coords).y)
     }
 
     return <canvas 
@@ -175,43 +205,32 @@ export default function Funplot() {
   }
 
 function Panel({panel}:{
-    panel: Panel
+    panel: State<Panel>,
 }) {
-    return <div className="block">
-        Panel {panel.figure.type}
-    </div>
-    switch(panel.figure.type) {
+    const figure = getField(panel, 'figure')
+    switch(get(figure).type) {
         case 'graph':
-            return <GraphPanel figure={panel.figure} active={panel.active}/>
+            return <GraphPanel figure={figure} active={get(panel).active}/>
         default:
-            return <>unknown panel type {panel.figure.type}</>
+            return <>unknown panel type {get(panel).figure.type}</>
     }
 }
 
 function GraphPanel({figure, active}: 
     {
-        figure: GraphFigure,
+        figure: State<GraphFigure>,
         active: boolean
     }) {
-    const [value, setValue] = useState<Color|string>('#1677ff')
-    const color = useMemo(
-        () => (typeof value === 'string' ? value : value.toRgbString()),
-        [value],
-        )
+    const [color, setColor] = useState<string>('#ff1677')
 
     return <div>
-            <Trigger
-            action={['click']}
-            prefixCls="rc-color-picker"
-            popupPlacement="bottomLeft"
-            builtinPlacements={builtinPlacements}
-            popup={<ColorPicker value={value} onChange={setValue} />}
-        >
-            <ColorBlock color={color} prefixCls="rc-color-picker" />
-        </Trigger>
+            <ColorBlock color={color} setColor={setColor} />
+            {active && <>
+                <span>y(x)=</span>
+                <input type="text" className="border" />
+            </>}
     </div>
     /*
-        <colorpicker v-model="plot_color" /> ' +
     <span v-if="inverted">x(y)</span><span v-else>y(x)</span> = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
     </div>' +
     <div class="options_pane" v-else>' +
@@ -223,3 +242,21 @@ function GraphPanel({figure, active}:
     </>
     */
   }
+
+function ColorBlock({color, setColor}:{
+    color: string,
+    setColor: Dispatch<SetStateAction<string>>
+}) {
+    const [open, setOpen] = useState<boolean>(false)
+    return <>
+        <div 
+            className="w-5 h-5 rounded" 
+            style={{background: color}}
+            onClick={() => setOpen(!open)}
+        />
+        {open && <HexColorPicker 
+            color={color} 
+            onChange={setColor} 
+            />}
+    </>
+}
