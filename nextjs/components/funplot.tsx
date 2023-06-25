@@ -1,9 +1,13 @@
 'use client'
-import {useRef, useState, useEffect, SetStateAction, Dispatch, MouseEvent, UIEvent, WheelEvent} from 'react'
+import {useRef, useState, useEffect, SetStateAction, Dispatch, 
+    MouseEvent, UIEvent, WheelEvent, ChangeEvent, ChangeEventHandler
+    } from 'react'
 import assert from 'assert'
 import { HexColorPicker } from "react-colorful"
+import { compile, parse } from 'mathjs'
 
-import Plot from '@/lib/plot'
+import { Axes, ContextWrapper, canvasContext, translateAxes, zoomAxes } from '@/lib/plot'
+import funGraph from '@/lib/funGraph'
 
 // [value, setValue] pairs
 type State<T> = [T, (cb: (newValue: T) => T) => void]
@@ -30,6 +34,11 @@ function update<T>([value, setValue]: State<T>, cb: (newValue: T) => T) {
     setValue(cb)
 }
 
+// onChange event handler of input for a string state [value, setValue]
+function onChange([value, setValue]: State<string>): ChangeEventHandler<HTMLInputElement> {
+    return (evt: ChangeEvent<HTMLInputElement>) => setValue(_ => evt.target.value)
+}
+
 // map a function over a state [value, setValue]
 // building the setState function for each element of the array
 function map<T,U>([value, setValue]: State<T[]>, f: (item: State<T>, i: number) => U): U[] {
@@ -44,9 +53,33 @@ type Coords = {
 type GraphFigure = {
     type: 'graph',
     color: string,
+    inverted: boolean,
+    expr: string,
 }
 
 type Figure = GraphFigure
+
+function updateFigure(figure: Figure, ctx: ContextWrapper, div?: HTMLDivElement) {
+    switch(figure.type) {
+        case 'graph': return updateGraphFigure(figure, ctx, div)
+        default: return `invalid figure type ${figure.type}`
+    }
+}
+
+function updateGraphFigure(figure: GraphFigure, ctx: ContextWrapper, div?: HTMLDivElement) {
+    try {
+        var compiledExpr = compile(figure.expr)
+    } catch(e) {
+        return `${e}`
+    }
+    const formula_html = `$$ ${figure.inverted ? 'x' : 'y'} = ${parse(figure.expr).toTex()} $$`
+    // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
+    const f: ((x:number) => number) = figure.inverted 
+        ? y => compiledExpr.evaluate({y})
+        : x => compiledExpr.evaluate({x})
+    ctx.ctx.strokeStyle = figure.color;
+    funGraph(ctx, f, figure.inverted)
+}
 
 interface Panel {
     key: string,
@@ -54,7 +87,7 @@ interface Panel {
     active: boolean,
 }
 
-function drawFigure(figure: Figure, plot: Plot) {
+function drawFigure(figure: Figure, plot: ContextWrapper) {
 
 }
 
@@ -70,7 +103,9 @@ export default function Funplot() {
         console.log(`newPanel: ${value}`)
         const figure: Figure = {
             type: 'graph',
+            inverted: false,
             color: '#f00',
+            expr: 'sin(x^2)/x'
         }
         update(panels, panels => [...panels, {
             figure,
@@ -79,7 +114,7 @@ export default function Funplot() {
         }])
     }
 
-    return <main className="flex flex-col flex-1 bg-blue-500">
+    return <main className="flex flex-col flex-1 bg-blue-200">
       <h1 className="">Funplot</h1>
       <div className="block">
         { map(panels, panel => <Panel key={get(panel).key} panel={panel} />) }
@@ -96,96 +131,78 @@ export default function Funplot() {
         <span>x={get(coords).x}</span>, <span>y={get(coords).y}</span>
       </div>
       <div className="flex-1 border-2 border-black h-8 bg-white">  
-        <Canvas coords={coords} panels={panels} />
+        <Canvas 
+            plot={(ctx) => {
+                ctx.clear();
+                ctx.drawAxes();           
+            }}
+            coords={coords}
+            click={coords => {}}
+        />
       </div>
-      </main>
-  }
+    </main>
+}
 
-  function Canvas({coords, panels}
+function Canvas({plot, coords, click}
     :{
-        coords: State<Coords>, 
-        panels: State<Panel[]>
+        plot: (ctx: ContextWrapper) => void,
+        coords: State<Coords>,
+        click: (coords: Coords) => void,
     }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const [plot, setPlot] = useState<Plot|null>(null)
+    const axes = useState<Axes>({x: 0, y: 0, r: 5})
     const [dragStart, setDragStart] = useState<{x: number, y:number}>({x:0, y:0})
     const [dragging, setDragging] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
     const canvas = canvasRef.current
 
-    useEffect(() => {
-        const canvas = canvasRef.current
-        assert(canvas, 'canvas not initialized')
-        canvas.width = canvas.offsetWidth
-        canvas.height = canvas.offsetHeight
-        const plot = new Plot({
-            xCenter: 0.0,
-            yCenter: 0.0,
-            radius: Math.sqrt(320*320 + 240*240) / 80
-          })
-
-          plot.setCanvas(canvas)
-          plot.drawAxes()
-          setPlot(plot)        
-    },[])
-
-    function draw(plot: Plot) {
-        plot.clear();
-        plot.drawAxes();
-        map(panels, panel => drawFigure(get(panel).figure, plot))
+    if (canvas) {
+        canvas.width = canvas.clientWidth
+        canvas.height = canvas.clientHeight
     }
 
-    function drawToCanvas() {
-        if (!plot) return
-        plot.setCanvas(canvas)
-        draw(plot);
-    }
+    const ctx = canvas ? canvasContext(get(axes), canvas) : null
 
-    type MyMouseEvent = MouseEvent<HTMLCanvasElement>
+    if (ctx) plot(ctx)
 
-    function onMouseDown(evt: MyMouseEvent) {
-        if (!plot) return
+    function onMouseDown(evt: MouseEvent<HTMLCanvasElement>) {
+        if (!ctx) return
         document.body.style.userSelect = 'none'        
-        setDragStart(plot.mouse_coords(evt))
+        setDragStart(ctx.mouseCoords(evt))
         setMoved(false)
         setDragging(true)
     }
   
-    function onMouseMove(evt: MyMouseEvent) {
-        if (!plot) return
-        const pos = plot.mouse_coords(evt)
+    function onMouseMove(evt: MouseEvent<HTMLCanvasElement>) {
+        if (!ctx) return
+        const pos = ctx.mouseCoords(evt)
         if (dragging) {
-          plot.translate(dragStart.x-pos.x, dragStart.y-pos.y)
-          drawToCanvas()
+            set(axes, translateAxes(get(axes), dragStart.x-pos.x, dragStart.y-pos.y))
         }
         set(coords, {x: pos.x, y: pos.y})
         setMoved(true)
     }
   
-    function onMouseUp(evt: MyMouseEvent) {
-        if (!plot) return
-        const pos = plot.mouse_coords(evt);
+    function onMouseUp(evt: MouseEvent<HTMLCanvasElement>) {
+        if (!ctx) return
+        const pos = ctx.mouseCoords(evt);
         if (!moved) { // it's a click!
-            map(panels, panel => {
-                if (get(panel).active) clickFigure(get(panel).figure, pos)
-            })
+            click(pos)
         }
         setMoved(false)
         setDragging(false)
     }
   
     function zoom(delta: number, x:number, y:number) {
-        if (!plot) return
+        if (!ctx) return
         var factor = Math.exp(delta/40)
-        plot.zoom(factor, x, y)
-        drawToCanvas()
+        set(axes, zoomAxes(get(axes), factor, x, y))
     }
 
     function onScroll(evt: UIEvent<HTMLCanvasElement>) {
         console.log('onScroll')
-        if (!plot) return
-        const pos = plot.mouse_coords(evt)
-        zoom(-evt.detail, pos.x, pos.y)
+        if (!ctx) return
+        zoom(-evt.detail, get(coords).x, get(coords).y)
     }
 
     function onWheel(evt: WheelEvent<HTMLCanvasElement>) {
@@ -202,7 +219,7 @@ export default function Funplot() {
             onScroll={onScroll}
             onWheel={onWheel}
         />
-  }
+}
 
 function Panel({panel}:{
     panel: State<Panel>,
@@ -221,14 +238,17 @@ function GraphPanel({figure, active}:
         figure: State<GraphFigure>,
         active: boolean
     }) {
-    const [color, setColor] = useState<string>('#ff1677')
+    const color = useState<string>('#ff1677')
+    const expr = getField(figure, 'expr')
 
-    return <div>
-            <ColorBlock color={color} setColor={setColor} />
-            {active && <>
-                <span>y(x)=</span>
-                <input type="text" className="border" />
-            </>}
+    if (active) return <div>
+        <ColorBlock color={color} active={active}/>
+        <span>y(x)=</span>
+        <input type="text" className="border" value={get(expr)} onChange={onChange(expr)} />
+    </div>
+    else return <div>
+        <ColorBlock color={color} active={active}/>
+        <span>y(x)={get(expr)}</span>
     </div>
     /*
     <span v-if="inverted">x(y)</span><span v-else>y(x)</span> = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
@@ -243,20 +263,21 @@ function GraphPanel({figure, active}:
     */
   }
 
-function ColorBlock({color, setColor}:{
-    color: string,
-    setColor: Dispatch<SetStateAction<string>>
+function ColorBlock({color, active}:{
+    color: State<string>,
+    active: boolean
 }) {
-    const [open, setOpen] = useState<boolean>(false)
+    const open = useState<boolean>(false)
     return <>
         <div 
             className="w-5 h-5 rounded" 
-            style={{background: color}}
-            onClick={() => setOpen(!open)}
+            style={{background: get(color)}}
+            onClick={() => (active && update(open, open => !open))}
         />
-        {open && <HexColorPicker 
-            color={color} 
-            onChange={setColor} 
+        {active && get(open) && <button className="border rounded" onClick={() => set(open,false)}>close</button> }
+        {active && get(open) && <HexColorPicker 
+            color={get(color)} 
+            onChange={_ => set(color, _)} 
             />}
     </>
 }
