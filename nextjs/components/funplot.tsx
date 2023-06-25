@@ -6,6 +6,7 @@ import assert from 'assert'
 
 import { ContextWrapper } from '@/lib/plot'
 import funGraph from '@/lib/funGraph'
+import levelPlot from '@/lib/levels'
 import { get, set, getField, update, map, extract, onChange, State, SetState } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
@@ -35,8 +36,10 @@ function figure(state: FigureState): Figure {
     switch(state.type) {
         case 'graph':
             return graphFigure(state)
-        default:
-            return errorFigure(state, `unknown figure type ${state.type}`)
+        case 'implicit':
+            return implicitFigure(state)
+//        default:
+//            return errorFigure(state, `unknown figure type ${state.type}`)
     }
 }
 
@@ -94,6 +97,47 @@ function graphFigure(state: GraphFigureState): Figure {
     }
 }
 
+function implicitFigure(state: ImplicitFigureState): Figure {
+    let fun: ((x:number, y:number) => number) | null = null
+    let errors: string[] = []
+    let formulaHtml = ''
+    try {
+        const compiledExpr = compile(state.expr)
+        fun = (x,y) => compiledExpr.evaluate({x, y})
+        console.log(`compiled? ${state.expr} fun(0,0)=${fun(0,0)}`)
+        fun(0,0) // try if it is working
+    } catch(e) {
+        errors.push(`${e}`)
+    }
+    try {
+        formulaHtml = `$$ ${parse(state.expr).toTex()} = 0 $$`
+        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
+    } catch(e) {
+        errors.push(`${e}`)
+    }
+
+    if (errors) {
+        formulaHtml = `<span class="error">${errors.join('<br/>')}</span>`
+    }
+
+    function plot(ctx: ContextWrapper) {
+        ctx.ctx.strokeStyle = state.color
+        if (fun) {
+            try {
+                levelPlot(ctx, fun)
+            } catch(e) {
+                console.error(e)
+            }    
+        }
+    }
+
+    return {
+        state,
+        plot,
+        htmlElement: <span className="formula" dangerouslySetInnerHTML={{__html: formulaHtml}} />,
+    }
+}
+
 interface IPanel {
     key: string,
     figure: FigureState,
@@ -117,6 +161,29 @@ function extractFigurePairFromPanels<FigureType extends FigureState>(panelsPair:
     return [figure, setFigure]
 }
 
+function newState(value: string): FigureState { 
+    switch(value) {
+        case 'graph': return {
+            type: 'graph',
+            inverted: false,
+            color: '#f00',
+            expr: 'x*sin(1/x)',   
+        }
+        case 'graph_inverted': return {
+            type: 'graph',
+            inverted: true,
+            color: '#0f0',
+            expr: 'y^2',  
+        }
+        case 'implicit': return {
+            type: 'implicit',
+            color: '#00f',
+            expr: 'x^4-x^2+y^2',
+        }
+    }
+    assert(false,`invalid figure type ${value}`)
+}
+
 
 export default function Funplot() {
     const coordsPair = useState<Coords>({x: NaN, y: NaN})
@@ -125,28 +192,6 @@ export default function Funplot() {
     const figures = get(panelsPair).map(p => figure(p.figure))
 
     function newPanel(value: string) {
-        function newState(type: string): FigureState { 
-            switch(value) {
-                case 'graph': return {
-                    type: 'graph',
-                    inverted: false,
-                    color: '#f00',
-                    expr: 'x*sin(1/x)',   
-                }
-                case 'graph_inverted': return {
-                    type: 'graph',
-                    inverted: true,
-                    color: '#0f0',
-                    expr: 'y^2',  
-                }
-                case 'implicit': return {
-                    type: 'implicit',
-                    color: '#00f',
-                    expr: 'x^4-x^2+y^2',
-                }
-            }
-            assert(false,`invalid figure type ${value}`)
-        }
         const fig = newState(value)
         update(panelsPair, panels => [...panels, {
             figure: fig,
@@ -169,23 +214,11 @@ export default function Funplot() {
         const [panels, setPanels] = panelsPair
         return panels.map(panel => {
             const figure: FigureState = panel.figure
-
-            if (figure.type === 'graph') {
-                /*
-                // construct the setFigure function
-                // from the setPanels function
-                const setFigure = (figure: GraphFigureState): SetState<GraphFigureState> => (cb: (old: GraphFigureState) => GraphFigureState) => {
-                    setPanels(panels => panels.map(p => {
-                        if (p.figure === figure) {
-                            return {...p, figure: cb(p.figure)}
-                        } else {
-                            return p
-                        }
-                    }))
-                }
-                const figurePair: State<GraphFigureState> = [figure, setFigure(figure)]
-                */
-                return <GraphPanel state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, figure)} active={panel.active}/>
+            switch(figure.type) {
+                case 'graph':
+                    return <GraphPanel key={panel.key} state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, figure)} active={panel.active}/>
+                case 'implicit':
+                    return <ImplicitPanel key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, figure)} active={panel.active}/>
             }
         })
     }
@@ -194,15 +227,7 @@ export default function Funplot() {
     return <main className="flex flex-col flex-1 bg-blue-200">
       <h1 className="">Funplot</h1>
       <div className="block">
-        { 
-            panelElements()
-            /*map(panels, panel => 
-            {
-                return <Panel key={get(panel).key} panel={panel} />
-            }
-            )
-            */ 
-        }
+        { panelElements() }
         <select value="" className="border" onChange={evt => newPanel(evt.target.value)}>
             <option value="">new plot</option>
             <option value="graph">graph y=f(x)</option>
@@ -220,33 +245,6 @@ export default function Funplot() {
       </div>
     </main>
 }
- 
-/*
-function Panel({panel}:{
-    panel: State<IPanel>,
-}) {
-    const statePair: State<FigureState> = getField(panel, 'figure')
-
-    function isGraph([value, setValue]: [FigureState, State<FigureState>]): setValue is SetState<GraphFigureState> {
-        return pair[0].type === 'graph'
-    }
-
-    if (statePair[0].type === 'graph') {
-        const setState: ((cb: (x: GraphFigureState)=>GraphFigureState) => void) = statePair[1]
-        return <GraphPanel state={[statePair[0],setState]} active={get(panel).active}/>
-    }
-    switch(statePair[0].type) {
-        case 'graph':
-            assert(statePair[0].type === 'graph')
-            isPanel<GraphFigureState>(...statePair)
-            return <GraphPanel state={[statePair[0],statePair[1]]} active={get(panel).active}/>
-//        case 'implicit':
-//            return <ImplicitPanel state={state} active={get(panel).active}/>
-        default:
-            return <>unknown panel type {get(state).type}</>
-    }
-}
-*/
 
 function GraphPanel({state, active}: 
     {
@@ -276,7 +274,7 @@ function GraphPanel({state, active}:
     */
   }
 
-  function ImplicitPanel({state, active}: 
+function ImplicitPanel({state, active}: 
     {
         state: State<ImplicitFigureState>,
         active: boolean
