@@ -1,21 +1,21 @@
-export default function funGraph(plot, func, inverted) {
-    var ref = plot.getReference();
+import { ContextWrapper } from "./plot";
+
+export default function funGraph(plot: ContextWrapper, func: (x: number) => number, inverted: boolean) {
     var pix = inverted?
-      (ref.yMax - ref.yMin)/ref.heightPx:
-      (ref.xMax - ref.xMin)/ref.widthPx;
+      (plot.yMax - plot.yMin)/plot.height:
+      (plot.xMax - plot.xMin)/plot.width;
   
     plot.ctx.beginPath();
   
-    var x = inverted?ref.yMin:ref.xMin;
+    var x = inverted?plot.yMin:plot.xMin;
     var y = func(x);
     var need_move = 1;
     var max_dx = pix;
     var min_dx = pix/10;
     var dx = max_dx;
-    var count = 0;
-    var xend = inverted?ref.yMax:ref.xMax;
-    var ymin = inverted?ref.xMin:ref.yMin;
-    var ymax = inverted?ref.xMax:ref.yMax;
+    var xend = inverted?plot.yMax:plot.xMax;
+    var ymin = inverted?plot.xMin:plot.yMin;
+    var ymax = inverted?plot.xMax:plot.yMax;
     while(x<xend) {
       var xx = x+dx;
       var yy = func(xx);
@@ -95,7 +95,6 @@ export default function funGraph(plot, func, inverted) {
               need_move = 0;
             }
             inverted?plot.lineTo(yyy, xxx):plot.lineTo(xxx, yyy);
-            count ++;
           }
         }
       }
