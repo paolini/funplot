@@ -1,4 +1,4 @@
-import {useRef, useState, 
+import {useRef, useState, useEffect,
     MouseEvent, UIEvent, WheelEvent,
     } from 'react'
 
@@ -17,7 +17,11 @@ export default function Canvas({plot, coords, click}
     const [dragStart, setDragStart] = useState<{x: number, y:number}>({x:0, y:0})
     const [dragging, setDragging] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
-    const canvas = canvasRef.current
+    const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
+
+    useEffect(() => {
+        setCanvas(canvasRef.current)
+    }, [])
 
     if (canvas) {
         canvas.width = canvas.clientWidth
@@ -69,7 +73,7 @@ export default function Canvas({plot, coords, click}
     }
 
     function onWheel(evt: WheelEvent<HTMLCanvasElement>) {
-        var delta = evt.deltaY/40 
+        var delta = -evt.deltaY/40 
         zoom(delta, get(coords).x, get(coords).y)
     }
 

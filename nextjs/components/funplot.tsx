@@ -2,10 +2,11 @@
 import {useState } from 'react'
 import { HexColorPicker } from "react-colorful"
 import { compile, parse } from 'mathjs'
+import assert from 'assert'
 
 import { ContextWrapper } from '@/lib/plot'
 import funGraph from '@/lib/funGraph'
-import { get, set, getField, update, map, onChange, State } from '@/lib/State'
+import { get, set, getField, update, map, extract, onChange, State, SetState } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
 
@@ -16,7 +17,13 @@ interface GraphFigureState {
     expr: string
 }
 
-type FigureState = GraphFigureState
+interface ImplicitFigureState {
+    type: 'implicit'
+    color: string
+    expr: string
+}
+
+type FigureState = GraphFigureState|ImplicitFigureState
 
 interface Figure {
     state: FigureState
@@ -37,7 +44,7 @@ function errorFigure(state: FigureState, error: string): Figure {
     return {
         state,
         plot: (ctx: ContextWrapper) => {},
-        htmlElement: <span className="error">{error}</span>
+        htmlElement: <span className="error">{error}</span>,
     }
 }
 
@@ -52,6 +59,8 @@ function graphFigure(state: GraphFigureState): Figure {
         } else {
             fun = x => compiledExpr.evaluate({x})
         }
+        console.log(`compiled? ${state.expr} fun(0)=${fun(0)}`)
+        fun(0) // try if it is working
     } catch(e) {
         errors.push(`${e}`)
     }
@@ -68,35 +77,78 @@ function graphFigure(state: GraphFigureState): Figure {
 
     function plot(ctx: ContextWrapper) {
         ctx.ctx.strokeStyle = state.color
-        if (fun) funGraph(ctx, fun, state.inverted)
+        console.log(`panel plot color ${state.color}`)
+        if (fun) {
+            try {
+                funGraph(ctx, fun, state.inverted)
+            } catch(e) {
+                console.error(e)
+            }    
+        }
     }
 
     return {
         state,
         plot,
-        htmlElement: <span className="formula" dangerouslySetInnerHTML={{__html: formulaHtml}} />
+        htmlElement: <span className="formula" dangerouslySetInnerHTML={{__html: formulaHtml}} />,
     }
 }
 
-interface Panel {
+interface IPanel {
     key: string,
-    figure: Figure,
+    figure: FigureState,
     active: boolean,
 }
 
+// construct the setFigure function
+// from the setPanels function
+function extractFigurePairFromPanels<FigureType extends FigureState>(panelsPair: State<IPanel[]>, figure: FigureType): State<FigureType> {
+    const [panels, setPanels] = panelsPair
+    function setFigure(cb: (old: FigureType) => FigureType) {
+        setPanels(panels => panels.map((p: IPanel) => {
+            if (p.figure === figure) {
+                const newPanel: IPanel = {...p, figure: cb(figure)}
+                return newPanel
+            } else {
+                return p
+            }
+        }))
+    }
+    return [figure, setFigure]
+}
+
+
 export default function Funplot() {
-    const coords = useState<Coords>({x: NaN, y: NaN})
-    const panels = useState<Panel[]>([])
+    const coordsPair = useState<Coords>({x: NaN, y: NaN})
+    const panelsPair = useState<IPanel[]>([])
+
+    const figures = get(panelsPair).map(p => figure(p.figure))
 
     function newPanel(value: string) {
-        console.log(`newPanel: ${value}`)
-        const fig = figure({
-            type: 'graph',
-            inverted: false,
-            color: '#f00',
-            expr: 'sin(x^2)/x'
-        })
-        update(panels, panels => [...panels, {
+        function newState(type: string): FigureState { 
+            switch(value) {
+                case 'graph': return {
+                    type: 'graph',
+                    inverted: false,
+                    color: '#f00',
+                    expr: 'x*sin(1/x)',   
+                }
+                case 'graph_inverted': return {
+                    type: 'graph',
+                    inverted: true,
+                    color: '#0f0',
+                    expr: 'y^2',  
+                }
+                case 'implicit': return {
+                    type: 'implicit',
+                    color: '#00f',
+                    expr: 'x^4-x^2+y^2',
+                }
+            }
+            assert(false,`invalid figure type ${value}`)
+        }
+        const fig = newState(value)
+        update(panelsPair, panels => [...panels, {
             figure: fig,
             key: Math.random().toString(36).substring(7),
             active: true,
@@ -104,20 +156,53 @@ export default function Funplot() {
     }
 
     function plot(ctx: ContextWrapper) {
+        console.log('plot!')
         ctx.clear()
         ctx.drawAxes()
-        get(panels).forEach(panel => {
-            panel.figure.plot(ctx)
-        })
+        figures.forEach(figure => figure.plot(ctx))
     }
 
     function click(coords: Coords) {
     }
 
+    function panelElements() {
+        const [panels, setPanels] = panelsPair
+        return panels.map(panel => {
+            const figure: FigureState = panel.figure
+
+            if (figure.type === 'graph') {
+                /*
+                // construct the setFigure function
+                // from the setPanels function
+                const setFigure = (figure: GraphFigureState): SetState<GraphFigureState> => (cb: (old: GraphFigureState) => GraphFigureState) => {
+                    setPanels(panels => panels.map(p => {
+                        if (p.figure === figure) {
+                            return {...p, figure: cb(p.figure)}
+                        } else {
+                            return p
+                        }
+                    }))
+                }
+                const figurePair: State<GraphFigureState> = [figure, setFigure(figure)]
+                */
+                return <GraphPanel state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, figure)} active={panel.active}/>
+            }
+        })
+    }
+
+
     return <main className="flex flex-col flex-1 bg-blue-200">
       <h1 className="">Funplot</h1>
       <div className="block">
-        { map(panels, panel => <Panel key={get(panel).key} panel={panel} />) }
+        { 
+            panelElements()
+            /*map(panels, panel => 
+            {
+                return <Panel key={get(panel).key} panel={panel} />
+            }
+            )
+            */ 
+        }
         <select value="" className="border" onChange={evt => newPanel(evt.target.value)}>
             <option value="">new plot</option>
             <option value="graph">graph y=f(x)</option>
@@ -128,37 +213,78 @@ export default function Funplot() {
         </select>
       </div>
       <div className="block">    
-        <span>x={get(coords).x}</span>, <span>y={get(coords).y}</span>
+        <span>x={get(coordsPair).x}</span>, <span>y={get(coordsPair).y}</span>
       </div>
       <div className="flex-1 border-2 border-black h-8 bg-white">  
-        <Canvas plot={plot} coords={coords} click={click}/>
+        <Canvas plot={plot} coords={coordsPair} click={click}/>
       </div>
     </main>
 }
-
-
+ 
+/*
 function Panel({panel}:{
-    panel: State<Panel>,
+    panel: State<IPanel>,
 }) {
-    const figure = getField(panel, 'figure')
-    const state = getField(figure, 'state')
-    switch(get(state).type) {
+    const statePair: State<FigureState> = getField(panel, 'figure')
+
+    function isGraph([value, setValue]: [FigureState, State<FigureState>]): setValue is SetState<GraphFigureState> {
+        return pair[0].type === 'graph'
+    }
+
+    if (statePair[0].type === 'graph') {
+        const setState: ((cb: (x: GraphFigureState)=>GraphFigureState) => void) = statePair[1]
+        return <GraphPanel state={[statePair[0],setState]} active={get(panel).active}/>
+    }
+    switch(statePair[0].type) {
         case 'graph':
-            return <GraphPanel state={state} active={get(panel).active}/>
+            assert(statePair[0].type === 'graph')
+            isPanel<GraphFigureState>(...statePair)
+            return <GraphPanel state={[statePair[0],statePair[1]]} active={get(panel).active}/>
+//        case 'implicit':
+//            return <ImplicitPanel state={state} active={get(panel).active}/>
         default:
             return <>unknown panel type {get(state).type}</>
     }
 }
+*/
 
 function GraphPanel({state, active}: 
     {
         state: State<GraphFigureState>,
         active: boolean
     }) {
-    const color = useState<string>('#ff1677')
+    const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
 
-    if (active) return <div>
+    if (active) return <div className="flex flex-row">
+        <ColorBlock color={color} active={active}/>
+        <span>f(x,y)=</span>
+        <input type="text" className="border" value={get(expr)} onChange={onChange(expr)} />
+        <span>=0</span>
+    </div>
+    else return <div>
+        <ColorBlock color={color} active={active}/>
+        <span>{get(expr)}=0</span>
+    </div>
+    /*
+    <br/><button @click="edit">edit</button>' +
+    <span class="color_button" :style="\'background-color: \' + plot_color.hex"></span>' +
+    </div>' +
+    <p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
+    </div>',
+    </>
+    */
+  }
+
+  function ImplicitPanel({state, active}: 
+    {
+        state: State<ImplicitFigureState>,
+        active: boolean
+    }) {
+    const color = getField(state,'color')
+    const expr: State<string> = getField(state, 'expr')
+
+    if (active) return <div className="flex flex-row">
         <ColorBlock color={color} active={active}/>
         <span>y(x)=</span>
         <input type="text" className="border" value={get(expr)} onChange={onChange(expr)} />
@@ -168,9 +294,6 @@ function GraphPanel({state, active}:
         <span>y(x)={get(expr)}</span>
     </div>
     /*
-    <span v-if="inverted">x(y)</span><span v-else>y(x)</span> = <input v-model="expr" class="expr"> <span v-html="expr_compilation_error"></span>' +
-    </div>' +
-    <div class="options_pane" v-else>' +
     <br/><button @click="edit">edit</button>' +
     <span class="color_button" :style="\'background-color: \' + plot_color.hex"></span>' +
     </div>' +
@@ -185,7 +308,7 @@ function ColorBlock({color, active}:{
     active: boolean
 }) {
     const open = useState<boolean>(false)
-    return <>
+    return <div className="inline">
         <div 
             className="w-5 h-5 rounded" 
             style={{background: get(color)}}
@@ -193,8 +316,9 @@ function ColorBlock({color, active}:{
         />
         {active && get(open) && <button className="border rounded" onClick={() => set(open,false)}>close</button> }
         {active && get(open) && <HexColorPicker 
+            className=""
             color={get(color)} 
             onChange={_ => set(color, _)} 
             />}
-    </>
+    </div>
 }
