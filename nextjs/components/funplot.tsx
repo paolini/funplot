@@ -2,17 +2,19 @@
 import {useState } from 'react'
 import { HexColorPicker } from "react-colorful"
 import assert from 'assert'
+import 'katex/dist/katex.min.css'
+import TeX from '@matejmazur/react-katex'
 
 import { ContextWrapper } from '@/lib/plot'
-import { get, set, getField, update, map, extract, onChange, State, SetState } from '@/lib/State'
+import { get, set, getField, update, map, extract, onChange, onChangeBoolean, State, SetState } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
-import { FigureState, GraphFigureState, ImplicitFigureState, figure } from '@/lib/figures'
+import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, figure, Figure } from '@/lib/figures'
+import { staticGenerationAsyncStorage } from 'next/dist/client/components/static-generation-async-storage'
 
 interface IPanel {
     key: string,
     figure: FigureState,
-    active: boolean,
 }
 
 // construct the setFigure function
@@ -105,13 +107,26 @@ export default function Funplot() {
 
     function panelElements() {
         const [panels, setPanels] = panelsPair
-        return panels.map(panel => {
-            const figure: FigureState = panel.figure
-            switch(figure.type) {
+        assert(panels.length === figures.length)
+        return panels.map((panel,i) => {
+            const state: FigureState = panel.figure
+            switch(state.type) {
                 case 'graph':
-                    return <GraphPanel key={panel.key} state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, figure)} active={panel.active}/>
+                    return <GraphPanel key={panel.key} state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, state)}
+                        figure={figures[i]}
+                        />
                 case 'implicit':
-                    return <ImplicitPanel key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, figure)} active={panel.active}/>
+                    return <ImplicitPanel key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, state)}
+                        figure={figures[i]}
+                        />
+                case 'ode':
+                    return <OdeEquationPanel key={panel.key} state={extractFigurePairFromPanels<OdeEquationFigureState>(panelsPair, state)}
+                        figure={figures[i]}
+                        />
+                case 'system':
+                    return <OdeSystemPanel key={panel.key} state={extractFigurePairFromPanels<OdeSystemFigureState>(panelsPair, state)}
+                        figure={figures[i]}
+                        />
             }
         })
     }
@@ -139,77 +154,155 @@ export default function Funplot() {
     </main>
 }
 
-function GraphPanel({state, active}: 
+function GraphPanel({state, figure}: 
     {
         state: State<GraphFigureState>,
-        active: boolean
+        figure: Figure
     }) {
     const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
+    const active = useState(true)
 
-    if (active) return <div className="flex flex-row">
-        <ColorBlock color={color} active={active}/>
-        <span>f(x,y)=</span>
-        <input type="text" className="border" value={get(expr)} onChange={onChange(expr)} />
-        <span>=0</span>
-    </div>
-    else return <div>
-        <ColorBlock color={color} active={active}/>
-        <span>{get(expr)}=0</span>
-    </div>
-    /*
-    <br/><button @click="edit">edit</button>' +
-    <span class="color_button" :style="\'background-color: \' + plot_color.hex"></span>' +
-    </div>' +
-    <p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
-    </div>',
-    </>
-    */
+    return <PanelBand tex={figure.tex} color={color} active={active}>
+        <div className="flex flex-row px-2 items-center">
+            <span>{get(state).inverted?'x=f(y)=':'y=f(x)='}</span>
+            <Input expr={expr} />
+        </div>
+    </PanelBand>
   }
 
-function ImplicitPanel({state, active}: 
+function ImplicitPanel({state, figure}: 
     {
         state: State<ImplicitFigureState>,
-        active: boolean
+        figure: Figure,
     }) {
     const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
+    const active = useState(true)
 
-    if (active) return <div className="flex flex-row">
-        <ColorBlock color={color} active={active}/>
+    return <PanelBand color={color} active={active} tex={figure.tex}>
         <span>y(x)=</span>
-        <input type="text" className="border" value={get(expr)} onChange={onChange(expr)} />
-    </div>
-    else return <div>
-        <ColorBlock color={color} active={active}/>
-        <span>y(x)={get(expr)}</span>
-    </div>
-    /*
-    <br/><button @click="edit">edit</button>' +
-    <span class="color_button" :style="\'background-color: \' + plot_color.hex"></span>' +
-    </div>' +
-    <p class="formula_pane" @click="edit" v-html="formula_html"></p>' +
-    </div>',
-    </>
-    */
+        <Input expr={expr} />
+    </PanelBand>
   }
 
-function ColorBlock({color, active}:{
+function OdeEquationPanel({state, figure}: 
+    {
+        state: State<OdeEquationFigureState>,
+        figure: Figure,
+    }) {
+    const color = getField(state,'color')
+    const expr: State<string> = getField(state, 'expr')
+    const drawSlope: State<boolean> = getField(state, 'drawSlope')
+    const gridPoints: State<boolean> = getField(state, 'gridPoints') 
+    const active = useState(true)
+
+    return <PanelBand active={active} tex={figure.tex} color={color}>
+        <Checkbox value={drawSlope}>draw slope field</Checkbox>
+        <Checkbox value={gridPoints}>fill plane</Checkbox>
+        <Separator />
+        <span>y' = </span>
+        <Input expr={expr}/>
+    </PanelBand>
+  }
+
+  function OdeSystemPanel({state, figure} : {
+        state: State<OdeSystemFigureState>,
+        figure: Figure,
+
+    }) {
+    const color = getField(state,'color')
+    const exprX: State<string> = getField(state, 'exprX')
+    const exprY: State<string> = getField(state, 'exprY')
+    const drawSlope: State<boolean> = getField(state, 'drawSlope')
+    const gridPoints: State<boolean> = getField(state, 'gridPoints') 
+    const active = useState(true)
+
+    return <PanelBand active={active} tex={figure.tex} color={color}>
+        <Checkbox value={drawSlope}>draw slope field</Checkbox>
+        <Checkbox value={gridPoints}>fill plane</Checkbox>
+        <Separator />
+        <div className="grid grid-cols-4 grid-rows-2 auto-cols-min">
+            <div className="text-right">
+                x' = f(x,y) 
+            </div>
+            <div className="col-span-3">
+                = <Input expr={exprX} />
+            </div>
+            <div className="text-right">
+                y' = g(x,y) 
+            </div>
+            <div className="col-span-3">
+                = <Input expr={exprY} />
+            </div>
+        </div>
+    </PanelBand>
+  }
+
+function PanelBand({active, color, children, tex}:{
+    active: State<boolean>,
     color: State<string>,
-    active: boolean
+    tex: string
+    children: any,
+}) {
+    return <div className="flex flex-row items-center">
+        <ColorBlock color={color} active={active}/>
+        <Formula tex={tex} active={active}/>
+        {get(active) && <Separator />}
+        {get(active) && children}
+    </div>
+}
+
+function ColorBlock({color, active, className}:{
+    color: State<string>,
+    active: State<boolean>,
+    className?: string,
 }) {
     const open = useState<boolean>(false)
-    return <div className="inline">
+    return <div className="inline h-full">
         <div 
-            className="w-5 h-5 rounded" 
+            className={(className||"") + " w-5 h-5 rounded m-1"} 
             style={{background: get(color)}}
-            onClick={() => (active && update(open, open => !open))}
+            onClick={() => (get(active)?update(open, open => !open):set(active, true))}
         />
-        {active && get(open) && <button className="border rounded" onClick={() => set(open,false)}>close</button> }
-        {active && get(open) && <HexColorPicker 
+        {get(active) && get(open) && <HexColorPicker 
             className=""
             color={get(color)} 
             onChange={_ => set(color, _)} 
             />}
     </div>
+}
+
+function Formula({tex,active}:{
+    tex: string,
+    active: State<boolean>
+}) {
+    if (get(active)) return <TeX 
+            className="px-1 hover:bg-blue-300 border border-blue-200 hover:border-blue-400 rounded" 
+            math={tex} 
+            onClick={() => set(active, false)}
+            block />
+    else return <TeX 
+            className="hover:bg-blue-300 hover:border rounded" 
+            math={tex} 
+            onClick={() => set(active, true)}
+        />
+}
+
+function Input({expr}: {expr: State<string>}){
+    return <input className="h-8 border p-1 bg-blue-100" type="text" value={get(expr)} onChange={onChange(expr)} />
+}
+
+function Checkbox({value, children}:{
+    value: State<boolean>,
+    children: any,
+}) {
+    return <label className="flex flex-row items-center mx-1">
+        <input className="mr-1" type="checkbox" checked={get(value)} onChange={onChangeBoolean(value)} />
+        {children}
+    </label>
+}
+
+function Separator() {
+    return <div className="m-1 h-10 border-r-2 border-blue-400" />
 }

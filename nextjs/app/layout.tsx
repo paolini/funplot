@@ -15,6 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <title>FunPlot</title>
+      </head>
       <body className={inter.className}>
       <div className="w-full h-screen flex">
         {children}

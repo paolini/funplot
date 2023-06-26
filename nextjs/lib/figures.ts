@@ -49,7 +49,8 @@ export type FigureState =
 export interface Figure {
     state: FigureState
     plot: (ctx: ContextWrapper) => void
-    formulaHtml: string
+    tex: string,
+    errors: string[]
 }
 
 export function figure(state: FigureState): Figure {
@@ -68,7 +69,7 @@ export function figure(state: FigureState): Figure {
 function graphFigure(state: GraphFigureState): Figure {
     let fun: ((x:number) => number) | null = null
     let errors: string[] = []
-    let formulaHtml = ''
+    let tex = ''
     try {
         const compiledExpr = compile(state.expr)
         if (state.inverted) {
@@ -76,25 +77,21 @@ function graphFigure(state: GraphFigureState): Figure {
         } else {
             fun = x => compiledExpr.evaluate({x})
         }
-        console.log(`compiled? ${state.expr} fun(0)=${fun(0)}`)
-        fun(0) // try if it is working
+        fun(0) // check if it is working
     } catch(e) {
+        console.error(e)
         errors.push(`${e}`)
     }
     try {
-        formulaHtml = `$$ ${state.inverted ? 'x' : 'y'} = ${parse(state.expr).toTex()} $$`
+        tex = `${state.inverted ? 'x' : 'y'} = ${parse(state.expr).toTex()}`
         // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
     } catch(e) {
+        console.error(e)
         errors.push(`${e}`)
     }
-
-    if (errors) {
-        formulaHtml = `<span class="error">${errors.join('<br/>')}</span>`
-    }
-
+    
     function plot(ctx: ContextWrapper) {
         ctx.ctx.strokeStyle = state.color
-        console.log(`panel plot color ${state.color}`)
         if (fun) {
             try {
                 funGraph(ctx, fun, state.inverted)
@@ -104,34 +101,31 @@ function graphFigure(state: GraphFigureState): Figure {
         }
     }
 
+
     return {
         state,
         plot,
-        formulaHtml,
+        tex,
+        errors,
     }
 }
 
 function implicitFigure(state: ImplicitFigureState): Figure {
     let fun: ((x:number, y:number) => number) | null = null
     let errors: string[] = []
-    let formulaHtml = ''
+    let tex = ''
     try {
         const compiledExpr = compile(state.expr)
         fun = (x,y) => compiledExpr.evaluate({x, y})
-        console.log(`compiled? ${state.expr} fun(0,0)=${fun(0,0)}`)
-        fun(0,0) // try if it is working
+        fun(0,0) // check if it is working
     } catch(e) {
         errors.push(`${e}`)
     }
     try {
-        formulaHtml = `$$ ${parse(state.expr).toTex()} = 0 $$`
+        tex = `${parse(state.expr).toTex()} = 0`
         // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
     } catch(e) {
         errors.push(`${e}`)
-    }
-
-    if (errors) {
-        formulaHtml = `<span class="error">${errors.join('<br/>')}</span>`
     }
 
     function plot(ctx: ContextWrapper) {
@@ -148,7 +142,8 @@ function implicitFigure(state: ImplicitFigureState): Figure {
     return {
         state,
         plot,
-        formulaHtml,
+        tex,
+        errors
     }
 }
 
@@ -168,9 +163,9 @@ function odePlotHelper(ctx: ContextWrapper, state: OdeFigureStateCommon, fx: Fun
             var dy = dx;
             options.grid_distance = Math.sqrt(2) * dx / 1.99;
             for (var x = ctx.xMin + dx/2; x < ctx.xMax; x+=dx) {
-            for (var y = ctx.yMin + dy/2; y < ctx.yMax; y+=dy) {
-                options.grid_points.push([x,y]);
-            }
+                for (var y = ctx.yMin + dy/2; y < ctx.yMax; y+=dy) {
+                    options.grid_points.push([x,y]);
+                }
             }
         }
 
@@ -200,26 +195,19 @@ function odePlotHelper(ctx: ContextWrapper, state: OdeFigureStateCommon, fx: Fun
 function odeEquationFigure(state: OdeEquationFigureState): Figure {
     let fun: ((x:number, y:number) => number) | null = null
     let errors: string[] = []
-    let formulaHtml = ''
+    let tex = ''
     try {
         const compiledExpr = compile(state.expr)
         fun = (x,y) => compiledExpr.evaluate({x, y})
-        console.log(`compiled? ${state.expr} fun(0,0)=${fun(0,0)}`)
         fun(0,0) // try if it is working
     } catch(e) {
         errors.push(`${e}`)
     }
     try {
-        formulaHtml = `$$
-            y' = ${parse(state.expr.replace(/y/g,'y')).toTex()}
-            $$`
+        tex = `y' = ${parse(state.expr.replace(/y/g,'y')).toTex()}`                        
         // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
     } catch(e) {
         errors.push(`${e}`)
-    }
-
-    if (errors) {
-        formulaHtml = `<span class="error">${errors.join('<br/>')}</span>`
     }
 
     function plot(ctx: ContextWrapper) {
@@ -232,7 +220,8 @@ function odeEquationFigure(state: OdeEquationFigureState): Figure {
     return {
         state,
         plot,
-        formulaHtml,
+        tex,
+        errors
     }
 }
 
@@ -240,33 +229,26 @@ function odeSystemFigure(state: OdeSystemFigureState): Figure {
     let funX: ((x:number, y:number) => number) | null = null
     let funY: ((x:number, y:number) => number) | null = null
     let errors: string[] = []
-    let formulaHtml = ''
+    let tex = ''
     try {
         const compiledExprX = compile(state.exprX)
         const compiledExprY = compile(state.exprY)
         funX = (x,y) => compiledExprX.evaluate({x, y})
         funY = (x,y) => compiledExprY.evaluate({x, y})
-        console.log(`compiled? ${state.exprX} funX(0,0)=${funX(0,0)}`)
-        console.log(`compiled? ${state.exprY} funY(0,0)=${funY(0,0)}`)
-        funX(0,0) // try if it is working
+        funX(0,0) // check if it is working
         funY(0,0)
     } catch(e) {
         errors.push(`${e}`)
     }
     try {
-        formulaHtml = `$$
+        tex = `
             \\begin{cases}
             x' = ${parse(state.exprX).toTex()} \\\\
             y' = ${parse(state.exprY).toTex()} \\\\
-            \\end{cases}
-            $$`
+            \\end{cases}`
         // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
     } catch(e) {
         errors.push(`${e}`)
-    }
-
-    if (errors) {
-        formulaHtml = `<span class="error">${errors.join('<br/>')}</span>`
     }
 
     function plot(ctx: ContextWrapper) {
@@ -278,6 +260,7 @@ function odeSystemFigure(state: OdeSystemFigureState): Figure {
     return {
         state,
         plot,
-        formulaHtml,
+        tex,
+        errors
     }
 }

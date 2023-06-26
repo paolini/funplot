@@ -32,6 +32,11 @@ export function onChange([value, setValue]: State<string>): ChangeEventHandler<H
     return (evt: ChangeEvent<HTMLInputElement>) => setValue(_ => evt.target.value)
 }
 
+export function onChangeBoolean([value, setValue]: State<boolean>): ChangeEventHandler<HTMLInputElement> {
+    return (evt: ChangeEvent<HTMLInputElement>) => setValue(_ => evt.target.checked)
+}
+
+
 // map a function over a state [value, setValue]
 // building the setState function for each element of the array
 export function map<T,U>([value, setValue]: State<T[]>, f: (item: State<T>, i: number) => U): U[] {
