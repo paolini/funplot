@@ -10,11 +10,11 @@ import { get, set, getField, update, map, extract, onChange, onChangeBoolean, St
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
 import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, figure, Figure } from '@/lib/figures'
-import { staticGenerationAsyncStorage } from 'next/dist/client/components/static-generation-async-storage'
 
-interface IPanel {
+type IPanel = {
     key: string,
     figure: FigureState,
+    active: boolean,
 }
 
 // construct the setFigure function
@@ -34,7 +34,7 @@ function extractFigurePairFromPanels<FigureType extends FigureState>(panelsPair:
     return [figure, setFigure]
 }
 
-function newState(value: string): FigureState { 
+function newFigureState(value: string): FigureState { 
     switch(value) {
         case 'graph': return {
             type: 'graph',
@@ -79,7 +79,6 @@ function newState(value: string): FigureState {
     assert(false,`invalid figure type ${value}`)
 }
 
-
 export default function Funplot() {
     const coordsPair = useState<Coords>({x: NaN, y: NaN})
     const panelsPair = useState<IPanel[]>([])
@@ -87,7 +86,7 @@ export default function Funplot() {
     const figures = get(panelsPair).map(p => figure(p.figure))
 
     function newPanel(value: string) {
-        const fig = newState(value)
+        const fig = newFigureState(value)
         update(panelsPair, panels => [...panels, {
             figure: fig,
             key: Math.random().toString(36).substring(7),
@@ -103,6 +102,15 @@ export default function Funplot() {
     }
 
     function click(coords: Coords) {
+        const panelPairs: State<IPanel>[] = map(panelsPair, panel => panel)
+        const figurePairs: State<FigureState>[] = panelPairs.map(panel => getField(panel, 'figure'))
+        assert(figures.length === panelPairs.length)
+        assert(figures.length === figurePairs.length)
+        figures.forEach((figure,i) => {
+            if (get(panelPairs[i]).active) {
+                figure.click(getField(panelPairs[i],'figure'), coords)
+            }
+        })
     }
 
     function panelElements() {
@@ -110,27 +118,34 @@ export default function Funplot() {
         assert(panels.length === figures.length)
         return panels.map((panel,i) => {
             const state: FigureState = panel.figure
+            const active = getField(extract(panelsPair, panel),'active')
             switch(state.type) {
                 case 'graph':
-                    return <GraphPanel key={panel.key} state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, state)}
-                        figure={figures[i]}
-                        />
+                    return <GraphPanel 
+                            key={panel.key} 
+                            state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, state)}
+                            figure={figures[i]}
+                            active={active}
+                    />
                 case 'implicit':
-                    return <ImplicitPanel key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, state)}
-                        figure={figures[i]}
-                        />
+                    return <ImplicitPanel 
+                            key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, state)}
+                            figure={figures[i]}
+                            active={active}
+                    />
                 case 'ode':
                     return <OdeEquationPanel key={panel.key} state={extractFigurePairFromPanels<OdeEquationFigureState>(panelsPair, state)}
                         figure={figures[i]}
+                        active={active}
                         />
                 case 'system':
                     return <OdeSystemPanel key={panel.key} state={extractFigurePairFromPanels<OdeSystemFigureState>(panelsPair, state)}
                         figure={figures[i]}
+                        active={active}
                         />
             }
         })
     }
-
 
     return <main className="flex flex-col flex-1 bg-blue-200">
       <h1 className="">Funplot</h1>
@@ -154,14 +169,14 @@ export default function Funplot() {
     </main>
 }
 
-function GraphPanel({state, figure}: 
+function GraphPanel({state, figure, active}: 
     {
         state: State<GraphFigureState>,
-        figure: Figure
+        figure: Figure,
+        active: State<boolean>,
     }) {
     const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
-    const active = useState(true)
 
     return <PanelBand tex={figure.tex} color={color} active={active}>
         <div className="flex flex-row px-2 items-center">
@@ -171,14 +186,14 @@ function GraphPanel({state, figure}:
     </PanelBand>
   }
 
-function ImplicitPanel({state, figure}: 
+function ImplicitPanel({state, figure, active}: 
     {
         state: State<ImplicitFigureState>,
         figure: Figure,
+        active: State<boolean>
     }) {
     const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
-    const active = useState(true)
 
     return <PanelBand color={color} active={active} tex={figure.tex}>
         <span>y(x)=</span>
@@ -186,16 +201,16 @@ function ImplicitPanel({state, figure}:
     </PanelBand>
   }
 
-function OdeEquationPanel({state, figure}: 
+function OdeEquationPanel({state, figure, active}: 
     {
         state: State<OdeEquationFigureState>,
         figure: Figure,
+        active: State<boolean>
     }) {
     const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
     const drawSlope: State<boolean> = getField(state, 'drawSlope')
     const gridPoints: State<boolean> = getField(state, 'gridPoints') 
-    const active = useState(true)
 
     return <PanelBand active={active} tex={figure.tex} color={color}>
         <Checkbox value={drawSlope}>draw slope field</Checkbox>
@@ -206,17 +221,16 @@ function OdeEquationPanel({state, figure}:
     </PanelBand>
   }
 
-  function OdeSystemPanel({state, figure} : {
+  function OdeSystemPanel({state, figure, active} : {
         state: State<OdeSystemFigureState>,
         figure: Figure,
-
+        active: State<boolean>
     }) {
     const color = getField(state,'color')
     const exprX: State<string> = getField(state, 'exprX')
     const exprY: State<string> = getField(state, 'exprY')
     const drawSlope: State<boolean> = getField(state, 'drawSlope')
     const gridPoints: State<boolean> = getField(state, 'gridPoints') 
-    const active = useState(true)
 
     return <PanelBand active={active} tex={figure.tex} color={color}>
         <Checkbox value={drawSlope}>draw slope field</Checkbox>

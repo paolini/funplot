@@ -1,10 +1,12 @@
 import { compile, parse } from 'mathjs'
+import assert from 'assert'
 
 import { ContextWrapper } from '@/lib/plot'
 import funGraph from '@/lib/funGraph'
 import levelPlot from '@/lib/levels'
 import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/ode'
 import Coords from '@/lib/Coords'
+import { State, SetState, get, getField, update } from './State'
 
 export interface GraphFigureState {
     type: 'graph'
@@ -49,6 +51,7 @@ export type FigureState =
 export interface Figure {
     state: FigureState
     plot: (ctx: ContextWrapper) => void
+    click: (state: State<FigureState>, point: Coords) => void
     tex: string,
     errors: string[]
 }
@@ -101,13 +104,10 @@ function graphFigure(state: GraphFigureState): Figure {
         }
     }
 
-
-    return {
-        state,
-        plot,
-        tex,
-        errors,
+    function click(state: State<FigureState>, point: Coords) {
     }
+
+    return { state, plot, click, tex, errors }
 }
 
 function implicitFigure(state: ImplicitFigureState): Figure {
@@ -139,12 +139,8 @@ function implicitFigure(state: ImplicitFigureState): Figure {
         }
     }
 
-    return {
-        state,
-        plot,
-        tex,
-        errors
-    }
+    function click(state: State<FigureState>, point: Coords) {}
+    return {state, plot, click, tex, errors}
 }
 
 function odePlotHelper(ctx: ContextWrapper, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
@@ -217,12 +213,14 @@ function odeEquationFigure(state: OdeEquationFigureState): Figure {
         }
     }
 
-    return {
-        state,
-        plot,
-        tex,
-        errors
+    function click(statePair: State<FigureState>, point: Coords) {
+        assert(statePair[0].type === 'ode')
+        const odePair: State<OdeEquationFigureState> = statePair as State<OdeEquationFigureState>
+        const points = getField(odePair, 'points')
+        update<Coords[]>(points, points => [...points, point])
     }
+
+    return {state, plot, click, tex, errors}
 }
 
 function odeSystemFigure(state: OdeSystemFigureState): Figure {
@@ -257,10 +255,12 @@ function odeSystemFigure(state: OdeSystemFigureState): Figure {
         }
     }
 
-    return {
-        state,
-        plot,
-        tex,
-        errors
+    function click(statePair: State<FigureState>, point: Coords) {
+        assert(statePair[0].type === 'system')
+        const systemPair: State<OdeSystemFigureState> = statePair as State<OdeSystemFigureState>
+        const points = getField(systemPair, 'points')
+        update<Coords[]>(points, points => [...points, point])
     }
+
+    return {state, plot, click, tex, errors}
 }
