@@ -56,7 +56,7 @@ export function OdeEquationPanel({state, figure, active}:
                 <Checkbox value={drawSlope}>draw slope field</Checkbox>
                 <Checkbox value={gridPoints}>fill plane</Checkbox>
                 <Separator />
-                <span>y' = </span>
+                <span>y&apos; = </span>
                 <Input expr={expr}/>
             </div>
             <Points points={getField(state, 'points')} gridPoints={get(gridPoints)} />
@@ -85,7 +85,7 @@ export function OdeSystemPanel({state, figure, active} : {
                 <table><tbody>
                     <tr>
                         <td className="text-right min-w-max whitespace-nowrap">
-                        x' = f(x,y) 
+                        x&apos; = f(x,y) 
                         </td>
                         <td className="min-w-max whitespace-nowrap">
                         = <Input expr={exprX} />
@@ -93,7 +93,7 @@ export function OdeSystemPanel({state, figure, active} : {
                     </tr>
                     <tr>
                         <td className="text-right min-w-max whitespace-nowrap">
-                        y' = g(x,y) 
+                        y&apos; = g(x,y) 
                         </td>
                         <td className="min-w-max whitespace-nowrap">
                         = <Input expr={exprY} />
