@@ -3,14 +3,18 @@ import {useRef, useState, useEffect,
     } from 'react'
 
 import { Axes, ContextWrapper, canvasContext, translateAxes, zoomAxes } from '@/lib/plot'
-import { set, get, State } from '@/lib/State'
+import { set, get } from '@/lib/State'
 import Coords from '@/lib/Coords'
+import { context } from '@/lib/plot'
+import { jsPDF } from 'jspdf'
 
-export default function Canvas({plot, coords, click}
+type PlotFunction = (ctx: ContextWrapper) => void
+
+export default function Canvas({plot, click, info}
     :{
-        plot: (ctx: ContextWrapper) => void,
-        coords: State<Coords>,
+        plot: PlotFunction,
         click: (coords: Coords) => void,
+        info: {x:number, y:number, width:number, height:number, exportPdf: () => void},
     }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const axes = useState<Axes>({x: 0, y: 0, r: 5})
@@ -18,19 +22,31 @@ export default function Canvas({plot, coords, click}
     const [dragging, setDragging] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
+    const [count, setCount] = useState<number>(0) // used to force a re-render
 
     useEffect(() => {
         setCanvas(canvasRef.current)
+        window.addEventListener("resize",onWindowResize)
+        return (() => window.removeEventListener("resize",onWindowResize))
     }, [])
 
     if (canvas) {
         canvas.width = canvas.clientWidth
         canvas.height = canvas.clientHeight
+        info.width = canvas.width
+        info.height = canvas.height
+        info.exportPdf = exportPdf
     }
 
     const ctx = canvas ? canvasContext(get(axes), canvas) : null
 
-    if (ctx) plot(ctx)
+    if (ctx) {
+        plot(ctx)
+    }
+
+    function onWindowResize() {
+        setCount(count => count+1)
+    }
 
     function onMouseDown(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
@@ -46,7 +62,8 @@ export default function Canvas({plot, coords, click}
         if (dragging) {
             set(axes, translateAxes(get(axes), dragStart.x-pos.x, dragStart.y-pos.y))
         }
-        set(coords, {x: pos.x, y: pos.y})
+        info.x = pos.x
+        info.y = pos.y
         setMoved(true)
     }
   
@@ -69,13 +86,41 @@ export default function Canvas({plot, coords, click}
     function onScroll(evt: UIEvent<HTMLCanvasElement>) {
         console.log('onScroll')
         if (!ctx) return
-        zoom(-evt.detail, get(coords).x, get(coords).y)
+        zoom(-evt.detail, info.x, info.y)
     }
 
     function onWheel(evt: WheelEvent<HTMLCanvasElement>) {
         var delta = -evt.deltaY/40 
-        zoom(delta, get(coords).x, get(coords).y)
+        zoom(delta, info.x, info.y)
     }
+
+    function exportPdf() {
+        const width = canvas?.width || 640 
+        const height = canvas?.height || 480
+        const filename = 'funplot.pdf'
+        console.log(`export Pdf ${width}x${height}`)
+        const margin = 10
+        const doc = new jsPDF({
+            unit: 'pt',
+            format: [width+2*margin, height+2*margin],
+            orientation: (height > width ? 'p' : 'l')
+          })
+        doc.setLineJoin('rounded');
+        //  doc.line(20, 20, 60, 20) // horizontal line
+        //  doc.setLineWidth(0.5)
+      
+        const c = doc.context2d
+        c.autoPaging = false
+        console.log("autopaging: " + c.autoPaging)
+        //ctx.lineWidth = 1.0;
+        doc.setFontSize(10)
+        c.translate(margin, margin);
+        c.scale(1.0,1.0);
+        // doc.save("test.pdf")
+        const myctx = context(get(axes), width, height, c)
+        plot(myctx)        
+        doc.save(filename)
+      }
 
     return <canvas 
             className="h-full w-full" 

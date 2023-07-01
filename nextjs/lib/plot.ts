@@ -1,4 +1,4 @@
-import { MouseEvent, UIEvent } from 'react'
+import { MouseEvent } from 'react'
 import { format } from 'mathjs'
 
 export type Axes = {
@@ -7,6 +7,10 @@ export type Axes = {
   r: number
 }
 
+/**
+ * underlying drawing context
+ * in pixel coordinates
+ */
 export interface DrawingContext {
   clearRect(x: number, y: number, width: number, height: number): void,
   beginPath(): void,
@@ -21,6 +25,10 @@ export interface DrawingContext {
   font: string,
 }
 
+/**
+ * wrapping to underlying context
+ * in axes coordinates
+ */
 export interface ContextWrapper {
   ctx: DrawingContext,
   width: number,
@@ -74,7 +82,7 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
     y0,
     radius,
 
-    // probably not used:
+    // computed properties:
     xMin: x_pixel(0),
     xCenter: axes.x,
     xMax: x_pixel(width),
@@ -162,7 +170,7 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
         ctx.lineTo(x,y - tick_dir * (i%10==0 ? 6 : (i%5 == 0) ? 4:2));
         ctx.stroke();
         if (i%10 == 0) {
-          ctx.fillText(round(i*dx/10), x, y-text_dir*10.0);
+          ctx.fillText(`${round(i*dx/10)}`, x, y-text_dir*10.0);
         }
       }
 
@@ -189,7 +197,7 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
         ctx.stroke();
         if (i%10 == 0) {
           // ugly hack to get (hopefully!) correct digits
-          ctx.fillText(round(i*dx/10), x+text_dir*2, y+3);
+          ctx.fillText(`${round(i*dx/10)}`, x+text_dir*2, y+3);
         }
       }
     }

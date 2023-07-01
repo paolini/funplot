@@ -1,16 +1,12 @@
 'use client'
 import {useState } from 'react'
-import { HexColorPicker } from "react-colorful"
 import assert from 'assert'
-import 'katex/dist/katex.min.css'
-import TeX from '@matejmazur/react-katex'
 
 import { ContextWrapper } from '@/lib/plot'
-import { get, set, getField, update, map, extract, onChange, onChangeBoolean, State, SetState } from '@/lib/State'
+import { get, getField, update, map, extract, State, } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
-import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, figure, Figure } from '@/lib/figures'
-
+import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, figure, } from '@/lib/figures'
 import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel } from '@/components/panels'
 
 type IPanel = {
@@ -82,10 +78,10 @@ function newFigureState(value: string): FigureState {
 }
 
 export default function Funplot() {
-    const coordsPair = useState<Coords>({x: NaN, y: NaN})
     const panelsPair = useState<IPanel[]>([])
 
     const figures = get(panelsPair).map(p => figure(p.figure))
+    const info = { x:0,y:0,height:0,width:0, exportPdf: () => {} }
 
     function newPanel(value: string) {
         const fig = newFigureState(value)
@@ -94,6 +90,14 @@ export default function Funplot() {
             key: Math.random().toString(36).substring(7),
             active: true,
         }])
+    }
+
+    function performAction(value: string) {
+        switch(value) {
+            case 'pdf':
+                if (info.exportPdf) info.exportPdf()
+                break
+        }
     }
 
     function plot(ctx: ContextWrapper) {
@@ -150,23 +154,31 @@ export default function Funplot() {
     }
 
     return <main className="flex flex-col flex-1 bg-blue-200">
-      <h1 className="">Funplot</h1>
       <div className="block">
+        <div className="flex flex-row">
+            <span className="font-bold mx-1">FunPlot</span>
+            <select value="" className="border mx-1" onChange={evt => newPanel(evt.target.value)}>
+                <option value="">choose plot type</option>
+                <option value="graph">graph y=f(x)</option>
+                <option value="graph_inverted">graph x=f(y)</option>
+                <option value="implicit">level curve f(x,y)=0</option>
+                <option value="ode_equation">ODE equation</option>
+                <option value="ode_system">ODE system</option>
+            </select>
+            <select value="" className="border mx-1" onChange={evt => performAction(evt.target.value)}>
+                <option value="">choose action</option>
+                <option value="pdf">export PDF</option>
+            </select>
+            <span>x={info.x}</span>, <span>y={info.y}</span>
+        </div>
         { panelElements() }
-        <select value="" className="border" onChange={evt => newPanel(evt.target.value)}>
-            <option value="">new plot</option>
-            <option value="graph">graph y=f(x)</option>
-            <option value="graph_inverted">graph x=f(y)</option>
-            <option value="implicit">level curve f(x,y)=0</option>
-            <option value="ode_equation">ODE equation</option>
-            <option value="ode_system">ODE system</option>
-        </select>
-      </div>
-      <div className="block">    
-        <span>x={get(coordsPair).x}</span>, <span>y={get(coordsPair).y}</span>
       </div>
       <div className="flex-1 border-2 border-black h-8 bg-white">  
-        <Canvas plot={plot} coords={coordsPair} click={click}/>
+        <Canvas 
+            plot={plot} 
+            click={click}
+            info={info}
+        />
       </div>
     </main>
 }
