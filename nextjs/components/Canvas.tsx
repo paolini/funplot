@@ -130,5 +130,6 @@ export default function Canvas({axes, plot, click, info}
             onMouseUp={onMouseUp}
             onScroll={onScroll}
             onWheel={onWheel}
+            onBlur={() => setDragging(false)}
         />
 }

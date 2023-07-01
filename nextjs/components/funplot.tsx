@@ -9,6 +9,7 @@ import Canvas from '@/components/Canvas'
 import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, figure, } from '@/lib/figures'
 import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel } from '@/components/panels'
 import { Axes } from '@/lib/plot'
+import Messages, { IMessage } from './Messages'
 
 type IPanel = {
     key: string,
@@ -111,6 +112,7 @@ function newFigureState(opts: Options): FigureState {
 export default function Funplot() {
     const axes = useState<Axes>({x: 0, y: 0, r: 5})
     const panelsPair = useState<IPanel[]>([])
+    const messages = useState<IMessage[]>([])
 
     useEffect(() => {
         loadFromHash()
@@ -169,13 +171,70 @@ export default function Funplot() {
         }])
     }
 
+    function panelToOptions(panel: IPanel): Options {
+        const state = panel.figure
+        switch(state.type) {
+            case 'graph': return {
+                t: 'graph',
+                i: state.inverted,
+                c: state.color,
+                e: state.expr,
+            }
+            case 'implicit': return {
+                t: 'implicit',
+                c: state.color,
+                e: state.expr,
+            }
+            case 'ode': return {
+                t: 'ode_equation',
+                c: state.color,
+                sc: state.slopeColor,
+                e: state.expr,
+                ds: state.drawSlope,
+                gp: state.gridPoints,
+                l: state.points.map(p => [p.x,p.y]),
+            }
+            case 'system': return {
+                t: 'ode_system',
+                ex: state.exprX,
+                ey: state.exprY,
+                c: state.color,
+                sc: state.slopeColor,
+                ds: state.drawSlope,
+                da: state.drawArrows,
+                gp: state.gridPoints,
+                l: state.points.map(p => [p.x,p.y]),
+            }
+        }
+    }
+
     function performAction(value: string) {
         switch(value) {
             case 'pdf':
                 if (info.exportPdf) info.exportPdf()
                 break
+            case 'share':
+                const panels = get(panelsPair)
+                const opt = {
+                    p: get(axes),
+                    l: panels.map(panelToOptions),
+                }
+                const hash = encodeURIComponent(JSON.stringify(opt))
+                window.location.hash = `#q=${hash}`
+                // copy to clipboard
+                const el = document.createElement('textarea')
+                el.value = window.location.href
+                document.body.appendChild(el)
+                el.select()
+                document.execCommand('copy')
+                document.body.removeChild(el)
+                update<IMessage[]>(messages, messages => [...messages, {
+                    type: 'info',
+                    message: 'link copied to clipboard',
+                    }])
+                break
         }
-    }
+    }           
 
     function plot(ctx: ContextWrapper) {
         console.log('plot!')
@@ -261,10 +320,12 @@ export default function Funplot() {
             <select value="" className="border mx-1" onChange={evt => performAction(evt.target.value)}>
                 <option value="">choose action</option>
                 <option value="pdf">export PDF</option>
+                <option value="share">share link</option>
             </select>
             <span>x={info.x}</span>, <span>y={info.y}</span>
         </div>
         { panelElements() }
+        <Messages messages={messages} />
       </div>
       <div className="flex-1 border-2 border-black h-8 bg-white">  
         <Canvas 

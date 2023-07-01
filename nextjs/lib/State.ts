@@ -54,3 +54,8 @@ export function extract<T,U>(arrayPair: State<(T|U)[]>, value: U): State<U> {
     ))
     return [ value, setValue]
 }
+
+// remove an element from an array state
+export function remove<T>([values, setValues]: State<T[]>, value: State<T>) {
+    setValues(values => values.filter(item => item!==get(value)))
+}
