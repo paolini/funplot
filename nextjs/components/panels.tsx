@@ -70,6 +70,7 @@ export function OdeSystemPanel({state, figure, active} : {
         active: State<boolean>
     }) {
     const color = getField(state,'color')
+    const slopeColor = getField(state,'slopeColor')
     const exprX: State<string> = getField(state, 'exprX')
     const exprY: State<string> = getField(state, 'exprY')
     const drawSlope: State<boolean> = getField(state, 'drawSlope')
@@ -78,8 +79,8 @@ export function OdeSystemPanel({state, figure, active} : {
 
     return <PanelBand active={active} tex={figure.tex} color={color}>
         <div className="flex flex-col">
-            <div className="flex">
-                <Checkbox value={drawSlope}>draw slope field</Checkbox>
+            <div className="flex flex-row">
+                <SlopeControl value={drawSlope} color={slopeColor} />
                 <Checkbox value={gridPoints}>fill plane</Checkbox>
                 <Separator />
                 <table><tbody>
@@ -120,19 +121,30 @@ function PanelBand({active, color, children, tex}:{
     </div>
 }
 
+function SlopeControl({value, color}:{
+        value: State<boolean>,
+        color: State<string>
+    }) {
+    return <div className="flex flex-row items-center">
+        {get(value) && <ColorBlock className="flex mr-1" color={color} />}
+        <Checkbox value={value}>draw slope field</Checkbox>
+    </div>
+}
+
 function ColorBlock({color, active, className}:{
     color: State<string>,
-    active: State<boolean>,
+    active?: State<boolean>,
     className?: string,
 }) {
     const open = useState<boolean>(false)
-    return <div className="inline h-full">
+    const isActive = active ? get(active) : true
+    return <div className="inline">
         <div 
             className={(className||"") + " w-5 h-5 rounded m-1"} 
             style={{background: get(color)}}
-            onClick={() => (get(active)?update(open, open => !open):set(active, true))}
+            onClick={() => (isActive?update(open, open => !open):(active && set(active, true)))}
         />
-        {get(active) && get(open) && <HexColorPicker 
+        {isActive && get(open) && <HexColorPicker 
             className=""
             color={get(color)} 
             onChange={_ => set(color, _)} 

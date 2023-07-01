@@ -11,7 +11,7 @@ export function slopeGraph(plot: ContextWrapper, fx: Fun2, fy: Fun2, draw_arrows
     var ymax = plot.y_pixel(0);
     var gridx = (xmax - xmin)/40;
     var gridy = gridx;
-    var h = 0.3 * gridx;
+    var h = (draw_arrows?0.5:0.3) * gridx;
   
     for (var x=xmin + 0.5*gridx; x < xmax; x+=gridx) {
       for (var y=ymin + 0.5*gridy; y < ymax; y+=gridy) {
