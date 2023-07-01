@@ -274,6 +274,22 @@ export default function Funplot() {
     function panelElements() {
         const [panels, setPanels] = panelsPair
         assert(panels.length === figures.length)
+
+        function move(figure: FigureState, n: number) {
+            if (n === 0) {
+                setPanels(panels => panels.filter(p => p.figure !== figure))
+            } else {
+                const i = panels.findIndex(p => p.figure === figure)
+                const j = i + n
+                if (j < 0 || j >= panels.length) return
+                const newPanels = [...panels]
+                const tmp = newPanels[i]
+                newPanels[i] = newPanels[j]
+                newPanels[j] = tmp
+                setPanels(newPanels)
+            }
+        }
+
         return panels.map((panel,i) => {
             const state: FigureState = panel.figure
             const active = getField(extract(panelsPair, panel),'active')
@@ -284,22 +300,26 @@ export default function Funplot() {
                             state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, state)}
                             figure={figures[i]}
                             active={active}
+                            move={move}
                     />
                 case 'implicit':
                     return <ImplicitPanel 
                             key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, state)}
                             figure={figures[i]}
                             active={active}
+                            move={move}
                     />
                 case 'ode':
                     return <OdeEquationPanel key={panel.key} state={extractFigurePairFromPanels<OdeEquationFigureState>(panelsPair, state)}
-                        figure={figures[i]}
-                        active={active}
+                            figure={figures[i]}
+                            active={active}
+                            move={move}
                         />
                 case 'system':
                     return <OdeSystemPanel key={panel.key} state={extractFigurePairFromPanels<OdeSystemFigureState>(panelsPair, state)}
-                        figure={figures[i]}
-                        active={active}
+                            figure={figures[i]}
+                            active={active}
+                            move={move}
                         />
             }
         })

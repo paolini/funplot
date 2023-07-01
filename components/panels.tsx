@@ -2,21 +2,28 @@ import {useState } from 'react'
 import { HexColorPicker } from "react-colorful"
 import 'katex/dist/katex.min.css'
 import TeX from '@matejmazur/react-katex'
+import { FaTrash, FaArrowUp, FaArrowDown } from 'react-icons/fa'
 
 import { get, set, getField, update, onChange, onChangeBoolean, State } from '@/lib/State'
-import { GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, Figure } from '@/lib/figures'
+import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, Figure } from '@/lib/figures'
 import Coords from '@/lib/Coords'
 
-export function GraphPanel({state, figure, active}: 
+export function GraphPanel({state, figure, active, move}: 
     {
         state: State<GraphFigureState>,
         figure: Figure,
         active: State<boolean>,
+        move: (f: FigureState, n: number) => void,
     }) {
     const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
 
-    return <PanelBand tex={figure.tex} color={color} active={active}>
+    return <PanelBand 
+                tex={figure.tex} 
+                color={color} 
+                active={active}
+                move={n => move(figure.state, n)}
+                >
         <div className="flex flex-row px-2 items-center">
             <span>{get(state).inverted?'x=f(y)=':'y=f(x)='}</span>
             <Input expr={expr} />
@@ -24,33 +31,45 @@ export function GraphPanel({state, figure, active}:
     </PanelBand>
   }
 
-export function ImplicitPanel({state, figure, active}: 
+export function ImplicitPanel({state, figure, active, move}: 
     {
         state: State<ImplicitFigureState>,
         figure: Figure,
-        active: State<boolean>
+        active: State<boolean>,
+        move: (f: FigureState, n: number) => void,
     }) {
     const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
 
-    return <PanelBand color={color} active={active} tex={figure.tex}>
+    return <PanelBand 
+                color={color} 
+                active={active} 
+                tex={figure.tex}
+                move={n => move(figure.state, n)}
+            >
         <span>y(x)=</span>
         <Input expr={expr} />
     </PanelBand>
   }
 
-export function OdeEquationPanel({state, figure, active}: 
+export function OdeEquationPanel({state, figure, active, move}: 
     {
         state: State<OdeEquationFigureState>,
         figure: Figure,
-        active: State<boolean>
+        active: State<boolean>,
+        move: (f: FigureState, n: number) => void,
     }) {
     const color = getField(state,'color')
     const expr: State<string> = getField(state, 'expr')
     const drawSlope: State<boolean> = getField(state, 'drawSlope')
     const gridPoints: State<boolean> = getField(state, 'gridPoints') 
 
-    return <PanelBand active={active} tex={figure.tex} color={color}>
+    return <PanelBand 
+                active={active} 
+                tex={figure.tex} 
+                color={color}
+                move={n => move(figure.state, n)}
+            >
         <div className="flex flex-col">
             <div className="flex">
                 <Checkbox value={drawSlope}>draw slope field</Checkbox>
@@ -64,10 +83,11 @@ export function OdeEquationPanel({state, figure, active}:
     </PanelBand>
   }
 
-export function OdeSystemPanel({state, figure, active} : {
+export function OdeSystemPanel({state, figure, active, move} : {
         state: State<OdeSystemFigureState>,
         figure: Figure,
         active: State<boolean>
+        move: (f: FigureState, n: number) => void,
     }) {
     const color = getField(state,'color')
     const slopeColor = getField(state,'slopeColor')
@@ -77,7 +97,12 @@ export function OdeSystemPanel({state, figure, active} : {
     const gridPoints: State<boolean> = getField(state, 'gridPoints') 
     const points = getField(state, 'points')
 
-    return <PanelBand active={active} tex={figure.tex} color={color}>
+    return <PanelBand 
+                active={active} 
+                tex={figure.tex} 
+                color={color}
+                move={(n: number) => move(figure.state, n)}
+            >
         <div className="flex flex-col">
             <div className="flex flex-row">
                 <SlopeControl value={drawSlope} color={slopeColor} />
@@ -107,17 +132,25 @@ export function OdeSystemPanel({state, figure, active} : {
     </PanelBand>
   }
 
-function PanelBand({active, color, children, tex}:{
+function PanelBand({active, color, children, tex, move}:{
     active: State<boolean>,
     color: State<string>,
     tex: string
     children: any,
+    move: (n: number) => void,
 }) {
     return <div className="flex flex-row items-center">
         <ColorBlock color={color} active={active}/>
         <Formula tex={tex} active={active}/>
         {get(active) && <Separator />}
         {get(active) && children}
+        {get(active) &&
+            <div>
+                <FaTrash     className="inline border bg-blue-300 p-1 hover:border-black" onClick={evt => move(+0)} size="2em"/>
+                <FaArrowUp   className="inline border bg-blue-300 p-1 hover:border-black" onClick={evt => move(-1)} size="2em"/>
+                <FaArrowDown className="inline border bg-blue-300 p-1 hover:border-black" onClick={evt => move(+1)} size="2em"/>
+            </div>
+        }   
     </div>
 }
 
