@@ -1,13 +1,14 @@
 'use client'
-import {useState } from 'react'
+import { useState, useEffect } from 'react'
 import assert from 'assert'
 
 import { ContextWrapper } from '@/lib/plot'
-import { get, getField, update, map, extract, State, } from '@/lib/State'
+import { get, set, getField, update, map, extract, State, } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
 import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, figure, } from '@/lib/figures'
 import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel } from '@/components/panels'
+import { Axes } from '@/lib/plot'
 
 type IPanel = {
     key: string,
@@ -32,29 +33,60 @@ function extractFigurePairFromPanels<FigureType extends FigureState>(panelsPair:
     return [figure, setFigure]
 }
 
-function newFigureState(value: string): FigureState { 
-    switch(value) {
+type GraphOptions = {
+    t: 'graph',
+    i: boolean, // inverted
+    e: string, // expr
+    c: string, // color
+}
+
+type ImplicitOptions = {
+    t: 'implicit',
+    e: string, // expr
+    c: string, // color
+}
+
+type OdeEquationOptions = {
+    t: 'ode_equation',
+    e: string, // expr
+    c: string, // color
+    sc: string, // slope_color
+    ds: boolean, // draw_slope
+    gp: boolean, // grid_points
+    l: [number,number][], // points
+}
+
+type OdeSystemOptions = {
+    t: 'ode_system',
+    ex: string, // expr
+    ey: string, // expr
+    da: boolean, // draw_arrows
+    c: string, // color
+    sc: string, // slope_color
+    ds: boolean, // draw_slope
+    gp: boolean, // grid_points
+    l: [number,number][], // points
+}
+
+type Options = GraphOptions | ImplicitOptions | OdeEquationOptions | OdeSystemOptions
+
+function newFigureState(opts: Options): FigureState { 
+    switch(opts.t) {
         case 'graph': return {
             type: 'graph',
-            inverted: false,
-            color: '#f00',
-            expr: 'x*sin(1/x)',   
-        }
-        case 'graph_inverted': return {
-            type: 'graph',
-            inverted: true,
-            color: '#0f0',
-            expr: 'y^2',  
+            inverted: opts.i,
+            color: opts.c,
+            expr: opts.e,   
         }
         case 'implicit': return {
             type: 'implicit',
-            color: '#00f',
-            expr: 'x^4-x^2+y^2',
+            color: opts.c,
+            expr: opts.e,
         }
         case 'ode_equation': return {
             type: 'ode',
-            color: "#4A90E2",
-            slopeColor: "#7ED321",
+            color: opts.c,
+            slopeColor: opts.sc,
             expr: "y^2+x",
             drawSlope: false,
             gridPoints: true,
@@ -67,24 +99,69 @@ function newFigureState(value: string): FigureState {
             exprY: "-sin(x)-y",
             color: "#4A90E2",
             slopeColor: "#7ED321",
-            drawSlope: false,
-            drawArrows: true,
-            gridPoints: true,
+            drawSlope: opts.ds,
+            drawArrows: opts.da,
+            gridPoints: opts.gp,
             gridCount: 20,
-            points: [],
+            points: opts.l.map(([x,y]) => ({x,y})),
         }
     }
-    assert(false,`invalid figure type ${value}`)
 }
 
 export default function Funplot() {
+    const axes = useState<Axes>({x: 0, y: 0, r: 5})
     const panelsPair = useState<IPanel[]>([])
+
+    useEffect(() => {
+        loadFromHash()
+    }, [])
 
     const figures = get(panelsPair).map(p => figure(p.figure))
     const info = { x:0,y:0,height:0,width:0, exportPdf: () => {} }
 
     function newPanel(value: string) {
-        const fig = newFigureState(value)
+        const fig = newFigureState(((type):Options => {
+            switch (type) {
+                case 'graph': return {
+                    t: 'graph',
+                    i: false,
+                    c: '#f00',
+                    e: 'x*sin(1/x)',
+                }
+                case 'graph_inverted': return {
+                    t: 'graph',
+                    i: true,
+                    c: '#0f0',
+                    e: 'y^2',
+                }
+                case 'implicit': return {
+                    t: 'implicit',
+                    c: '#00f',
+                    e: 'x^4-x^2+y^2',
+                }
+                case 'ode_equation': return {
+                    t: 'ode_equation',
+                    c: "#4A90E2",
+                    sc: "#7ED321",
+                    e: "y^2+x",
+                    ds: false,
+                    gp: true,
+                    l: [],
+                }
+                case 'ode_system': return {
+                    t: 'ode_system',
+                    ex: "y",
+                    ey: "-sin(x)-y",
+                    c: "#4A90E2",
+                    sc: "#7ED321",
+                    ds: false,
+                    da: true,
+                    gp: true,
+                    l: [],
+                }
+            }
+            assert(false,`invalid figure type ${type}`)
+        })(value))
         update(panelsPair, panels => [...panels, {
             figure: fig,
             key: Math.random().toString(36).substring(7),
@@ -117,6 +194,22 @@ export default function Funplot() {
                 figure.click(getField(panelPairs[i],'figure'), coords)
             }
         })
+    }
+
+    function loadFromHash() {
+        let hash = window.location.hash;
+        if (hash.substring(0,3) !== "#q=") return;
+        hash = hash.substring(3);
+        hash = decodeURIComponent(hash);
+        const opt = JSON.parse(hash);
+        console.log('hash:', opt)
+        set(axes, opt.p)
+        const figures: FigureState[] = opt.l.map((params: Options) => newFigureState(params))
+        set(panelsPair, figures.map(figure => ({
+            figure: figure,
+            key: Math.random().toString(36).substring(7),
+            active: true,
+        })))
     }
 
     function panelElements() {
@@ -175,6 +268,7 @@ export default function Funplot() {
       </div>
       <div className="flex-1 border-2 border-black h-8 bg-white">  
         <Canvas 
+            axes={axes}
             plot={plot} 
             click={click}
             info={info}

@@ -3,21 +3,21 @@ import {useRef, useState, useEffect,
     } from 'react'
 
 import { Axes, ContextWrapper, canvasContext, translateAxes, zoomAxes } from '@/lib/plot'
-import { set, get } from '@/lib/State'
+import { set, get, State } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import { context } from '@/lib/plot'
 import { jsPDF } from 'jspdf'
 
 type PlotFunction = (ctx: ContextWrapper) => void
 
-export default function Canvas({plot, click, info}
+export default function Canvas({axes, plot, click, info}
     :{
+        axes: State<Axes>,
         plot: PlotFunction,
         click: (coords: Coords) => void,
         info: {x:number, y:number, width:number, height:number, exportPdf: () => void},
     }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const axes = useState<Axes>({x: 0, y: 0, r: 5})
     const [dragStart, setDragStart] = useState<{x: number, y:number}>({x:0, y:0})
     const [dragging, setDragging] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
