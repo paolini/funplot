@@ -1,13 +1,12 @@
 import { compile, parse } from 'mathjs'
 import assert from 'assert'
 
-import { ContextWrapper } from '@/lib/plot'
 import funGraph from '@/lib/funGraph'
 import levelPlot from './levels'
 import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/ode'
 import Coords from '@/lib/Coords'
 import { State, SetState, get, getField, update } from './State'
-import { Lines } from './axes'
+import { Axes, Lines } from './axes'
 
 export interface GraphFigureState {
     type: 'graph'
@@ -51,7 +50,7 @@ export type FigureState =
 
 export interface Figure {
     state: FigureState
-    plot: (ctx: ContextWrapper) => void
+    plot: (axes: Axes) => Lines
     click: (state: State<FigureState>, point: Coords) => void
     tex: string,
     errors: string[]
@@ -69,48 +68,6 @@ export function figure(state: FigureState): Figure {
             return odeSystemFigure(state)
     }
 }
-
-function plotLines(plot: ContextWrapper, lines: Lines) {
-    const arrow_step = 80
-
-    lines.forEach(line => {
-      if (line.type === "line") {
-        plot.ctx.beginPath()
-        line.points.forEach(([x,y], i) => {
-          if (i === 0) plot.moveTo(x,y)
-          else plot.lineTo(x,y)
-        })
-        if (line.closed) plot.ctx.closePath()
-        plot.ctx.stroke()
-        if (line.arrows) {
-            for (let i=arrow_step;i<line.points.length;i+=2*arrow_step) {
-                const [x, y] = line.points[i]
-                const [xx, yy] = line.points[i-1]
-                plot.drawArrowHead(x,y, x-xx,y-yy)
-            }
-        }
-      } else if (line.type === "squares") {
-        line.squares.forEach(([[x,y],[dx,dy]]) => {
-          plot.ctx.beginPath()
-          plot.moveTo(x, y)
-          plot.lineTo(x+dx,y)
-          plot.lineTo(x+dx,y+dy)
-          plot.lineTo(x,y+dy)
-          plot.ctx.closePath()
-          plot.ctx.stroke()
-        })
-        plot.ctx.strokeStyle = "#0ff"
-      } else if (line.type === "segments") {
-        line.segments.forEach(([[x,y],[dx,dy]]) => {
-            plot.ctx.beginPath()
-            plot.moveTo(x,y)
-            plot.lineTo(x+dx,y+dy)
-            plot.ctx.stroke()
-            if (line.arrow) plot.drawArrowHead(x+dx,y+dy, dx,dy)
-        })
-      }
-    })
-  }  
 
 function graphFigure(state: GraphFigureState): Figure {
     let fun: ((x:number) => number) | null = null
@@ -136,16 +93,14 @@ function graphFigure(state: GraphFigureState): Figure {
         errors.push(`${e}`)
     }
     
-    function plot(ctx: ContextWrapper) {
-        ctx.ctx.strokeStyle = state.color
-        if (fun) {
-            try {
-                const lines = funGraph(ctx, fun, state.inverted)
-                plotLines(ctx, lines)
-            } catch(e) {
-                console.error(e)
-            }    
-        }
+    function plot(axes: Axes) {
+        if (!fun) return []
+        try {
+            return funGraph(axes, fun, state.inverted, state.color)
+        } catch(e) {
+            console.error(e)
+            return []
+        }    
     }
 
     function click(state: State<FigureState>, point: Coords) {
@@ -172,24 +127,21 @@ function implicitFigure(state: ImplicitFigureState): Figure {
         errors.push(`${e}`)
     }
 
-    function plot(ctx: ContextWrapper) {
-        ctx.ctx.strokeStyle = state.color
-        if (fun) {
-            try {
-                const lines = levelPlot(ctx, fun)
-                plotLines(ctx, lines)
-            } catch(e) {
-                console.error(e)
-            }    
-        }
+    function plot(axes: Axes) {
+        if (!fun) return []
+        try {
+            return levelPlot(axes, fun, state.color)
+        } catch(e) {
+            console.error(e)
+            return []
+        }    
     }
 
     function click(state: State<FigureState>, point: Coords) {}
     return {state, plot, click, tex, errors}
 }
 
-function odePlotHelper(ctx: ContextWrapper, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
-    ctx.ctx.strokeStyle = state.color
+function odePlotHelper(ctx: Axes, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
     try {
         var options: OdePlotOptions = {
             draw_arrows: !equation,
@@ -197,6 +149,7 @@ function odePlotHelper(ctx: ContextWrapper, state: OdeFigureStateCommon, fx: Fun
             grid_points: [],
             grid_distance: 0,
             grid_count: state.gridCount,
+            color: state.color,
         };
 
         if (state.gridPoints) {
@@ -210,26 +163,25 @@ function odePlotHelper(ctx: ContextWrapper, state: OdeFigureStateCommon, fx: Fun
             }
         }
 
+        let lines: Lines = []
         if (state.drawSlope) {
-            ctx.ctx.lineWidth = 2
-            ctx.ctx.strokeStyle = state.slopeColor
-            plotLines(ctx, slopeGraph(ctx, fx, fy, !equation))
+            lines.push(slopeGraph(ctx, fx, fy, !equation, state.slopeColor))
         }
-        ctx.ctx.lineWidth = 1;
-        ctx.ctx.strokeStyle = state.color;
 
         for (var i=0; i<state.points.length; ++i) {
-            plotLines(ctx, odePlot(ctx, fx, fy, state.points[i].x, state.points[i].y, options))
+            lines.push(odePlot(ctx, fx, fy, state.points[i].x, state.points[i].y, options))
         }
 
         for(;;) {
             const point = options.grid_points.pop();
             if (point === undefined) break
             const [x,y] = point
-            plotLines(ctx, odePlot(ctx, fx, fy, x, y, options))
+            lines.push(odePlot(ctx, fx, fy, x, y, options))
         }
+        return lines
     } catch(e) {
         console.error(e)
+        return []
     }    
 }
 
@@ -251,11 +203,10 @@ function odeEquationFigure(state: OdeEquationFigureState): Figure {
         errors.push(`${e}`)
     }
 
-    function plot(ctx: ContextWrapper) {
-        if (fun) {
-            const fx = (x: number, y: number) => 1.0            
-            odePlotHelper(ctx, state, fx, fun, true)
-        }
+    function plot(ctx: Axes) {
+        if (!fun) return []
+        const fx = (x: number, y: number) => 1.0            
+        return odePlotHelper(ctx, state, fx, fun, true)
     }
 
     function click(statePair: State<FigureState>, point: Coords) {
@@ -294,10 +245,10 @@ function odeSystemFigure(state: OdeSystemFigureState): Figure {
         errors.push(`${e}`)
     }
 
-    function plot(ctx: ContextWrapper) {
+    function plot(ctx: Axes) {
         if (funX && funY) {
-            odePlotHelper(ctx, state, funX, funY, false)
-        }
+            return odePlotHelper(ctx, state, funX, funY, false)
+        } else return []
     }
 
     function click(statePair: State<FigureState>, point: Coords) {

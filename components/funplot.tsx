@@ -10,6 +10,7 @@ import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureSt
 import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel } from '@/components/panels'
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
+import { Lines } from '@/lib/axes'
 
 type IPanel = {
     key: string,
@@ -240,7 +241,7 @@ export default function Funplot() {
         console.log('plot!')
         ctx.clear()
         ctx.drawAxes()
-        figures.forEach(figure => figure.plot(ctx))
+        figures.forEach(figure => plotLines(ctx, figure.plot(ctx)))
     }
 
     function click(coords: Coords) {
@@ -357,4 +358,52 @@ export default function Funplot() {
       </div>
     </main>
 }
+
+function plotLines(plot: ContextWrapper, lines: Lines) {
+    const arrow_step = 80
+
+    lines.forEach(line => {
+      if (line.type === "line") {
+        plot.ctx.strokeStyle = line.color
+        plot.ctx.lineWidth = line.width
+        plot.ctx.beginPath()
+        line.points.forEach(([x,y], i) => {
+          if (i === 0) plot.moveTo(x,y)
+          else plot.lineTo(x,y)
+        })
+        if (line.closed) plot.ctx.closePath()
+        plot.ctx.stroke()
+        if (line.arrows) {
+            for (let i=arrow_step;i<line.points.length;i+=2*arrow_step) {
+                const [x, y] = line.points[i]
+                const [xx, yy] = line.points[i-1]
+                plot.drawArrowHead(x,y, x-xx,y-yy)
+            }
+        }
+      } else if (line.type === "squares") {
+        line.squares.forEach(([[x,y],[dx,dy]]) => {
+          plot.ctx.beginPath()
+          plot.moveTo(x, y)
+          plot.lineTo(x+dx,y)
+          plot.lineTo(x+dx,y+dy)
+          plot.lineTo(x,y+dy)
+          plot.ctx.closePath()
+          plot.ctx.stroke()
+        })
+        plot.ctx.strokeStyle = "#0ff"
+      } else if (line.type === "segments") {
+        plot.ctx.strokeStyle = line.color
+        plot.ctx.lineWidth = line.width
+        line.segments.forEach(([[x,y],[dx,dy]]) => {
+            plot.ctx.beginPath()
+            plot.moveTo(x,y)
+            plot.lineTo(x+dx,y+dy)
+            plot.ctx.stroke()
+            if (line.arrow) plot.drawArrowHead(x+dx,y+dy, dx,dy)
+        })
+      }
+    })
+  }  
+
+
 

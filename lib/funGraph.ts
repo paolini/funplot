@@ -1,6 +1,6 @@
 import { Axes, Point, Lines } from "./axes"
 
-export default function funGraph(plot: Axes, func: (x: number) => number, inverted: boolean
+export default function funGraph(plot: Axes, func: (x: number) => number, inverted: boolean, color: string
   ): Lines {
     var pix = inverted
       ? (plot.yMax - plot.yMin)/plot.height
@@ -20,6 +20,8 @@ export default function funGraph(plot: Axes, func: (x: number) => number, invert
     function push() {
       if (points.length>0) lines.push({
         type: "line",
+        color,
+        width: 1,
         closed: false,
         arrows: false,
         points: points})

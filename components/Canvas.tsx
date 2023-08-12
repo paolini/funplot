@@ -133,3 +133,4 @@ export default function Canvas({axes, plot, click, info}
             onBlur={() => setDragging(false)}
         />
 }
+

@@ -30,7 +30,7 @@ function emptySquare(): Square {
   })
 }
 
-export default function levelPlot(plot: Axes, f: Fun): Lines {
+export default function levelPlot(plot: Axes, f: Fun, color: string): Lines {
   const draw_squares = false
   var squares: Square[] = [emptySquare()];
   // list of squares. Only add: index is identifier
@@ -371,6 +371,8 @@ export default function levelPlot(plot: Axes, f: Fun): Lines {
       }
       lines.push({
         type: "line",
+        color,
+        width: 1,
         arrows: false,
         closed,
         points,

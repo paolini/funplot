@@ -1,10 +1,10 @@
-import { Axes, Lines, Point, Segment} from './axes'
+import { Axes, Lines, Line, Point, Segment } from './axes'
 
 export default odePlot
 
 export type Fun2 = (x: number, y: number) => number
 
-export function slopeGraph(plot: Axes, fx: Fun2, fy: Fun2, draw_arrows: boolean): Lines {
+export function slopeGraph(plot: Axes, fx: Fun2, fy: Fun2, draw_arrows: boolean, color: string): Line {
     var xmin = plot.x_pixel(0);
     var ymin = plot.y_pixel(plot.height);
     var xmax = plot.x_pixel(plot.width);
@@ -13,23 +13,23 @@ export function slopeGraph(plot: Axes, fx: Fun2, fy: Fun2, draw_arrows: boolean)
     var gridy = gridx;
     var h = (draw_arrows?0.5:0.3) * gridx;
 
-    const lines: Lines = []
-  
+    const segments: Segment[] = []
+
     for (var x=xmin + 0.5*gridx; x < xmax; x+=gridx) {
-      const segments: Segment[] = []
       for (var y=ymin + 0.5*gridy; y < ymax; y+=gridy) {
           var dx = fx(x, y);
           var dy = fy(x, y);
           var s = h/Math.sqrt(dx*dx + dy*dy);
           segments.push([[x,y],[s*dx,s*dy]])
       }
-      lines.push({
-        type: "segments",
-        arrow: draw_arrows,
-        segments,
-      })
     }
-  return lines
+  return {
+      type: "segments",
+      width: draw_arrows ? 1 : 2,
+      color,
+      arrow: draw_arrows,
+      segments,
+    }
 }
   
 export type OdePlotOptions = {
@@ -38,9 +38,10 @@ export type OdePlotOptions = {
     grid_count: number,
     grid_points: [number, number][],
     grid_distance: number,
+    color: string,
   }
 
-export function odePlot(plot: Axes, fx: Fun2, fy: Fun2, x0: number, y0: number, options: OdePlotOptions): Lines {
+export function odePlot(plot: Axes, fx: Fun2, fy: Fun2, x0: number, y0: number, options: OdePlotOptions): Line {
     var xmin = plot.x_pixel(0);
     var ymin = plot.y_pixel(plot.height);
     var xmax = plot.x_pixel(plot.width);
@@ -49,15 +50,13 @@ export function odePlot(plot: Axes, fx: Fun2, fy: Fun2, x0: number, y0: number, 
     //const dt = plot.radius/plot.width;
     const draw_arrows = options &&  options.draw_arrows;
     const equation = options && options.equation;
-  
-    const lines: Lines = []
-
-    for (let dir=1;dir>=-1;dir-=2) {
+    
+    const points: Point[] = []
+    for (let dir=-1;dir<=1;dir+=2) {
       var maxstep = plot.width;
       var x = x0;
       var y = y0;
-      const points: Point[] = []
-      points.push([x,y])
+      if (dir>0) points.push([x,y])
       for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && (step < maxstep || equation); step++) {
         var dx = fx(x, y);
         var dy = fy(x, y);
@@ -89,12 +88,15 @@ export function odePlot(plot: Axes, fx: Fun2, fy: Fun2, x0: number, y0: number, 
           }
         }
       }
-      lines.push({
-        type: "line",
-        closed: false,
-        arrows: draw_arrows,
-        points,
-      })
+      if (dir < 0) points.reverse()
     }
-    return lines
+
+    return {
+      type: "line",
+      color: options.color,
+      width: 1,
+      closed: false,
+      arrows: draw_arrows,
+      points,
+    }
   }
