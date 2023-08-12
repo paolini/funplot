@@ -1,13 +1,46 @@
-export default function levelPlot(plot, f, levels, options) {
-  var squares = [{}];
+import {Axes, Line, Lines} from "./axes"
+import {ContextWrapper} from "./plot"
+
+type Fun = (x: number,y: number) => number 
+
+interface Square {
+  x: number, // left side
+  y: number, // lower side
+  depth: number, // depth in hierarchy
+  l: number, // side length l = L / 2^depth 
+  adjacent: [number, number, number, number], // E, N, W, S adjacent squares (smaller adjacent square of equal or larger size)
+  children: [number, number, number, number], // NE, NW, SW, SE internal subdivision
+  flag: number, // flag used during refinement & drawing
+  z: [number, number, number, number], // value of function in vertices: NE, NW, SW, SE
+  x0: number,
+  y0: number,
+}
+
+function emptySquare(): Square {
+  return ({
+    x: 0,
+    y: 0,
+    x0: 0,
+    y0: 0,
+    l: 0,
+    z: [0.0, 0.0, 0.0, 0.0],
+    depth: 0,
+    flag: 0,
+    adjacent: [0,0,0,0],
+    children: [0,0,0,0]
+  })
+}
+
+export default function levelPlot(plot: ContextWrapper, f: Fun) {
+  var squares: Square[] = [emptySquare()];
   // list of squares. Only add: index is identifier
   // index 0 is invalid
 
-  function sign_change(z0, z1) {
+  function sign_change(z0: number, z1: number) {
       return (z0< 0.0 && z1 >= 0.0) || (z0>= 0.0 && z1 < 0.0);
   }
 
-  function find_adjacent(square, j, t) {
+  function find_adjacent(square: Square, j: number, t: number) {
     // find the smallest children
     // of the adjacent square containing
     // the point on the side in direction j parametrized
@@ -52,7 +85,7 @@ export default function levelPlot(plot, f, levels, options) {
     return square_n;
   }
 
-  function check_z(square) {
+  function check_z(square: Square) {
     var x = square.x;
     var y = square.y;
     var l = square.l;
@@ -61,14 +94,14 @@ export default function levelPlot(plot, f, levels, options) {
     }
   }
 
-  function refine(square) {
+  function refine(square: Square) {
     var first = squares.length;
     var x = square.x;
     var y = square.y;
     var l = 0.5*square.l;
     var center_z = f(x+ l, y+l);
     var mid_z = [f(x+2.0*l,y+l), f(x+l,y+2.0*l), f(x,y+l), f(x+l,y)];
-    var children = [{},{},{},{}];
+    var children = [emptySquare(),emptySquare(),emptySquare(),emptySquare()];
     for (var j=0;j<4;++j) {
       var child = children[j];
       console.assert(!square.children[j]);
@@ -76,7 +109,6 @@ export default function levelPlot(plot, f, levels, options) {
       child.y = y + [1.0,1.0,0.0,0.0][j] * l;
       child.depth = square.depth + 1;
       child.l = l;
-      child.adjacent = [0,0,0,0];
       var m;
       m = square.adjacent[j];
       child.adjacent[j] = m && (squares[m].children[(j+1)%4] || m);
@@ -84,7 +116,6 @@ export default function levelPlot(plot, f, levels, options) {
       child.adjacent[(j+1)%4] = m && (squares[m].children[(j+3)%4] || m);
       child.adjacent[(j+2)%4] = first + (j+1)%4;
       child.adjacent[(j+3)%4] = first + (j+3)%4;
-      child.children = [0,0,0,0];
       child.flag = 0;
       // reuse already computed z-values
       child.z = [0.0, 0.0, 0.0, 0.0];
@@ -119,7 +150,7 @@ export default function levelPlot(plot, f, levels, options) {
     }
   }
 
-  function zero_interpolation(square, j) {
+  function zero_interpolation(square: Square, j: number) {
     // assume on side j of square there is a sign change
     // return the coordinates of the point on the side
     // where the linear interpolation is zero
@@ -138,14 +169,14 @@ export default function levelPlot(plot, f, levels, options) {
     return [x,y,t];
   }
 
-  function find_direction(flag) {
+  function find_direction(flag: number) {
     // return first 1-bit in flag
     var k;
     for (k=0;k<4 && !(flag & (1<<k));++k);
     return k;
   }
 
-  function other_direction(flag, j) {
+  function other_direction(flag: number, j: number) {
     // find a direction bit in flag which
     // is different from j and preferring opposite to j
     var k = (j+2)%4;
@@ -163,6 +194,7 @@ export default function levelPlot(plot, f, levels, options) {
   var ymin = plot.y_pixel(plot.height);
   var xmax = plot.x_pixel(plot.width);
   var ymax = plot.y_pixel(0);
+
   var pixel_eps = 2 * plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
   var L = 80 * pixel_eps;
   var histogram = Array(100);
@@ -178,16 +210,13 @@ export default function levelPlot(plot, f, levels, options) {
     first_square_in_row = squares.length;
     square_west = 0;
     for (var x = xmin; x<xmax; x += L) {
-      var square = {}; // new square
+      var square = emptySquare(); // new square
       var n = squares.length; // identifier of new square
       square.x = x; // left side
       square.y = y; // lower side
       square.depth = 0; // depth in hierarchy
       square.l = L; // side length l = L / 2^depth
-      square.adjacent = [0,0,0,0]; // E, N, W, S adjacent squares (smaller adjacent square of equal or larger size)
-      square.children = [0,0,0,0]; // NE, NW, SW, SE internal subdivision
       square.flag = 0; // flag used during refinement & drawing
-      square.z = [0.0,0.0,0.0,0.0]; // value of function in vertices: NE, NW, SW, SE
       square.z[0] = f(x+L,y+L); // NE
       if (square_west) {
         square.adjacent[2] = square_west; // W
@@ -221,7 +250,7 @@ export default function levelPlot(plot, f, levels, options) {
 
   // find magnitude low 2-percentile
   var count = 0;
-  var low_value;
+  var low_value = 0;
   for (var i=0;i<histogram.length;++i) {
     count += histogram[i];
     if (count*50>histogram_sum) {

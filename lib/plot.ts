@@ -14,6 +14,7 @@ export type Axes = {
 export interface DrawingContext {
   clearRect(x: number, y: number, width: number, height: number): void,
   beginPath(): void,
+  closePath(): void,
   moveTo(x: number, y: number): void,
   lineTo(x: number, y: number): void,
   stroke(): void,
