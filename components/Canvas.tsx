@@ -7,8 +7,9 @@ import { set, get, State } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import { context } from '@/lib/plot'
 import { jsPDF } from 'jspdf'
+import { Lines } from '@/lib/axes'
 
-type PlotFunction = (ctx: ContextWrapper) => void
+type PlotFunction = (ctx: ContextWrapper) => Lines
 
 export default function Canvas({axes, plot, click, info}
     :{
@@ -23,6 +24,8 @@ export default function Canvas({axes, plot, click, info}
     const [moved, setMoved] = useState<boolean>(false)
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
     const [count, setCount] = useState<number>(0) // used to force a re-render
+    const [pending, setPending] = useState<{timeout: NodeJS.Timeout|null}>({timeout: null})
+    const [lines, setLines] = useState<{mutable: Lines}>({mutable: []})
 
     useEffect(() => {
         setCanvas(canvasRef.current)
@@ -40,8 +43,22 @@ export default function Canvas({axes, plot, click, info}
 
     const ctx = canvas ? canvasContext(get(axes), canvas) : null
 
+    function draw(ctx: ContextWrapper, lines: Lines) {
+        ctx.clear()
+        ctx.drawAxes()
+        plotLines(ctx, lines)
+    }
+
     if (ctx) {
-        plot(ctx)
+        console.log('plot!')
+        draw(ctx, lines.mutable)
+        if (pending.timeout) clearTimeout(pending.timeout)
+        pending.timeout = setTimeout(() => {
+            console.log('recompute')
+            const ls = plot(ctx)
+            draw(ctx, ls)
+            lines.mutable = ls
+        }, 100)
     }
 
     function onWindowResize() {
@@ -118,7 +135,7 @@ export default function Canvas({axes, plot, click, info}
         c.scale(1.0,1.0);
         // doc.save("test.pdf")
         const myctx = context(get(axes), width, height, c)
-        plot(myctx)        
+        draw(myctx, lines.mutable)        
         doc.save(filename)
       }
 
@@ -134,3 +151,48 @@ export default function Canvas({axes, plot, click, info}
         />
 }
 
+function plotLines(plot: ContextWrapper, lines: Lines) {
+    const arrow_step = 80
+
+    lines.forEach(line => {
+      if (line.type === "line") {
+        plot.ctx.strokeStyle = line.color
+        plot.ctx.lineWidth = line.width
+        plot.ctx.beginPath()
+        line.points.forEach(([x,y], i) => {
+          if (i === 0) plot.moveTo(x,y)
+          else plot.lineTo(x,y)
+        })
+        if (line.closed) plot.ctx.closePath()
+        plot.ctx.stroke()
+        if (line.arrows) {
+            for (let i=arrow_step;i<line.points.length;i+=2*arrow_step) {
+                const [x, y] = line.points[i]
+                const [xx, yy] = line.points[i-1]
+                plot.drawArrowHead(x,y, x-xx,y-yy)
+            }
+        }
+      } else if (line.type === "squares") {
+        line.squares.forEach(([[x,y],[dx,dy]]) => {
+          plot.ctx.beginPath()
+          plot.moveTo(x, y)
+          plot.lineTo(x+dx,y)
+          plot.lineTo(x+dx,y+dy)
+          plot.lineTo(x,y+dy)
+          plot.ctx.closePath()
+          plot.ctx.stroke()
+        })
+        plot.ctx.strokeStyle = "#0ff"
+      } else if (line.type === "segments") {
+        plot.ctx.strokeStyle = line.color
+        plot.ctx.lineWidth = line.width
+        line.segments.forEach(([[x,y],[dx,dy]]) => {
+            plot.ctx.beginPath()
+            plot.moveTo(x,y)
+            plot.lineTo(x+dx,y+dy)
+            plot.ctx.stroke()
+            if (line.arrow) plot.drawArrowHead(x+dx,y+dy, dx,dy)
+        })
+      }
+    })
+  }  
