@@ -237,11 +237,11 @@ export default function Funplot() {
         }
     }           
 
-    function plot(ctx: ContextWrapper): Lines {
+    async function plot(ctx: ContextWrapper): Promise<Lines> {
         let lines: Lines = []
-        figures.forEach(figure => {
-            lines = lines.concat(figure.plot(ctx))
-        })
+        for(const figure of figures) {
+            lines = lines.concat(await figure.plot(ctx))
+        }
         return lines
     }
 

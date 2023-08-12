@@ -50,7 +50,7 @@ export type FigureState =
 
 export interface Figure {
     state: FigureState
-    plot: (axes: Axes) => Lines
+    plot: (axes: Axes) => Promise<Lines>
     click: (state: State<FigureState>, point: Coords) => void
     tex: string,
     errors: string[]
@@ -93,7 +93,7 @@ function graphFigure(state: GraphFigureState): Figure {
         errors.push(`${e}`)
     }
     
-    function plot(axes: Axes) {
+    async function plot(axes: Axes) {
         if (!fun) return []
         try {
             return funGraph(axes, fun, state.inverted, state.color)
@@ -127,7 +127,7 @@ function implicitFigure(state: ImplicitFigureState): Figure {
         errors.push(`${e}`)
     }
 
-    function plot(axes: Axes) {
+    async function plot(axes: Axes) {
         if (!fun) return []
         try {
             return levelPlot(axes, fun, state.color)
@@ -141,7 +141,7 @@ function implicitFigure(state: ImplicitFigureState): Figure {
     return {state, plot, click, tex, errors}
 }
 
-function odePlotHelper(ctx: Axes, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
+async function odePlotHelper(ctx: Axes, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
     try {
         var options: OdePlotOptions = {
             draw_arrows: !equation,
@@ -168,9 +168,9 @@ function odePlotHelper(ctx: Axes, state: OdeFigureStateCommon, fx: Fun2, fy: Fun
             lines.push(slopeGraph(ctx, fx, fy, !equation, state.slopeColor))
         }
 
-        for (var i=0; i<state.points.length; ++i) {
-            lines.push(odePlot(ctx, fx, fy, state.points[i].x, state.points[i].y, options))
-        }
+        state.points.forEach(({x, y}) => {
+            lines.push(odePlot(ctx, fx, fy, x, y, options))
+        })
 
         for(;;) {
             const point = options.grid_points.pop();
@@ -203,10 +203,10 @@ function odeEquationFigure(state: OdeEquationFigureState): Figure {
         errors.push(`${e}`)
     }
 
-    function plot(ctx: Axes) {
+    async function plot(ctx: Axes) {
         if (!fun) return []
         const fx = (x: number, y: number) => 1.0            
-        return odePlotHelper(ctx, state, fx, fun, true)
+        return await odePlotHelper(ctx, state, fx, fun, true)
     }
 
     function click(statePair: State<FigureState>, point: Coords) {
@@ -245,9 +245,9 @@ function odeSystemFigure(state: OdeSystemFigureState): Figure {
         errors.push(`${e}`)
     }
 
-    function plot(ctx: Axes) {
+    async function plot(ctx: Axes) {
         if (funX && funY) {
-            return odePlotHelper(ctx, state, funX, funY, false)
+            return await odePlotHelper(ctx, state, funX, funY, false)
         } else return []
     }
 

@@ -9,7 +9,7 @@ import { context } from '@/lib/plot'
 import { jsPDF } from 'jspdf'
 import { Lines } from '@/lib/axes'
 
-type PlotFunction = (ctx: ContextWrapper) => Lines
+type PlotFunction = (ctx: ContextWrapper) => Promise<Lines>
 
 export default function Canvas({axes, plot, click, info}
     :{
@@ -53,9 +53,9 @@ export default function Canvas({axes, plot, click, info}
         console.log('plot!')
         draw(ctx, lines.mutable)
         if (pending.timeout) clearTimeout(pending.timeout)
-        pending.timeout = setTimeout(() => {
+        pending.timeout = setTimeout(async () => {
             console.log('recompute')
-            const ls = plot(ctx)
+            const ls = await plot(ctx)
             draw(ctx, ls)
             lines.mutable = ls
         }, 100)
