@@ -1,30 +1,40 @@
-import { ContextWrapper } from "./plot";
+import { Axes, Point, Lines } from "./axes"
 
-export default function funGraph(plot: ContextWrapper, func: (x: number) => number, inverted: boolean) {
-    var pix = inverted?
-      (plot.yMax - plot.yMin)/plot.height:
-      (plot.xMax - plot.xMin)/plot.width;
-  
-    plot.ctx.beginPath();
-  
+export default function funGraph(plot: Axes, func: (x: number) => number, inverted: boolean
+  ): Lines {
+    var pix = inverted
+      ? (plot.yMax - plot.yMin)/plot.height
+      : (plot.xMax - plot.xMin)/plot.width
     var x = inverted?plot.yMin:plot.xMin;
     var y = func(x);
-    var need_move = 1;
     var max_dx = pix;
     var min_dx = pix/10;
     var dx = max_dx;
     var xend = inverted?plot.yMax:plot.xMax;
     var ymin = inverted?plot.xMin:plot.yMin;
     var ymax = inverted?plot.xMax:plot.yMax;
+
+    let lines: Lines = []
+    let points: Point[] = []
+
+    function push() {
+      if (points.length>0) lines.push({
+        type: "line",
+        closed: false,
+        arrows: false,
+        points: points})
+      points = []
+    }
+
     while(x<xend) {
       var xx = x+dx;
       var yy = func(xx);
       if (isNaN(y) || isNaN(yy)) {
-        need_move = 1;
+        push()
       } else if (yy>ymax && y > ymax) {
-        need_move = 1;
+        push()
       } else if (yy<ymin && y < ymin) {
-        need_move = 1;
+        push()
       } else {
         var dy = yy-y;
         if (Math.abs(dy) > pix) {
@@ -66,9 +76,9 @@ export default function funGraph(plot: ContextWrapper, func: (x: number) => numb
         }
         if (i>=ITER) {
           // jump detected
-          need_move = 1;
+          push()
         } else {
-          if (need_move) {
+          if (points.length === 0) {
             var xxx = x;
             var yyy = y;
             if (y > ymax) {
@@ -78,7 +88,9 @@ export default function funGraph(plot: ContextWrapper, func: (x: number) => numb
               yyy = ymin;
               xxx = x + (yyy-y)/(yy-y)*(xx-x);
             }
-            inverted?plot.moveTo(yyy,xxx):plot.moveTo(xxx,yyy);
+            points.push(inverted
+              ? [yyy,xxx]
+              : [xxx,yyy])
           }
           if (1) {
             var xxx = x;
@@ -86,21 +98,22 @@ export default function funGraph(plot: ContextWrapper, func: (x: number) => numb
             if (yy > ymax) {
               yyy = ymax;
               xxx = xx + (yyy-yy)/(y-yy)*(x - xx);
-              need_move = 1;
+              push()
             } else if (yy < ymin) {
               yyy = ymin;
               xxx = xx + (yyy-yy)/(y-yy)*(x - xx);
-              need_move = 1;
-            } else {
-              need_move = 0;
+              push()
             }
-            inverted?plot.lineTo(yyy, xxx):plot.lineTo(xxx, yyy);
+            points.push(inverted
+              ?[yyy, xxx]
+              :[xxx, yyy])
           }
         }
       }
       y = yy;
       x = xx;
     }
-    plot.ctx.stroke();
+    push()
+    return lines
   }
   

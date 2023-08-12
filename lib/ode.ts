@@ -1,10 +1,10 @@
-import { ContextWrapper } from './plot'
+import { Axes, Lines, Point, Segment} from './axes'
 
 export default odePlot
 
 export type Fun2 = (x: number, y: number) => number
 
-export function slopeGraph(plot: ContextWrapper, fx: Fun2, fy: Fun2, draw_arrows: boolean) {
+export function slopeGraph(plot: Axes, fx: Fun2, fy: Fun2, draw_arrows: boolean): Lines {
     var xmin = plot.x_pixel(0);
     var ymin = plot.y_pixel(plot.height);
     var xmax = plot.x_pixel(plot.width);
@@ -12,22 +12,25 @@ export function slopeGraph(plot: ContextWrapper, fx: Fun2, fy: Fun2, draw_arrows
     var gridx = (xmax - xmin)/40;
     var gridy = gridx;
     var h = (draw_arrows?0.5:0.3) * gridx;
+
+    const lines: Lines = []
   
     for (var x=xmin + 0.5*gridx; x < xmax; x+=gridx) {
+      const segments: Segment[] = []
       for (var y=ymin + 0.5*gridy; y < ymax; y+=gridy) {
           var dx = fx(x, y);
           var dy = fy(x, y);
           var s = h/Math.sqrt(dx*dx + dy*dy);
-          plot.ctx.beginPath();
-          plot.moveTo(x, y);
-          var xx = x + s*dx;
-          var yy = y + s*dy;
-          plot.lineTo(xx, yy);
-          plot.ctx.stroke();
-          if (draw_arrows) plot.drawArrowHead(xx,yy, dx,dy);
+          segments.push([[x,y],[s*dx,s*dy]])
       }
+      lines.push({
+        type: "segments",
+        arrow: draw_arrows,
+        segments,
+      })
     }
-  }
+  return lines
+}
   
 export type OdePlotOptions = {
     draw_arrows: boolean,
@@ -37,24 +40,24 @@ export type OdePlotOptions = {
     grid_distance: number,
   }
 
-export function odePlot(plot: ContextWrapper, fx: Fun2, fy: Fun2, x0: number, y0: number, options: OdePlotOptions) {
+export function odePlot(plot: Axes, fx: Fun2, fy: Fun2, x0: number, y0: number, options: OdePlotOptions): Lines {
     var xmin = plot.x_pixel(0);
     var ymin = plot.y_pixel(plot.height);
     var xmax = plot.x_pixel(plot.width);
     var ymax = plot.y_pixel(0);
     const dt = plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
     //const dt = plot.radius/plot.width;
-    var arrow_step = 80;
     const draw_arrows = options &&  options.draw_arrows;
     const equation = options && options.equation;
   
+    const lines: Lines = []
+
     for (let dir=1;dir>=-1;dir-=2) {
       var maxstep = plot.width;
       var x = x0;
       var y = y0;
-      var arrows = [];
-      plot.ctx.beginPath();
-      plot.moveTo(x, y);
+      const points: Point[] = []
+      points.push([x,y])
       for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && (step < maxstep || equation); step++) {
         var dx = fx(x, y);
         var dy = fy(x, y);
@@ -72,10 +75,7 @@ export function odePlot(plot: ContextWrapper, fx: Fun2, fy: Fun2, x0: number, y0
         dy = 0.5 * (dy + fy(xx,yy));
         x += r * dx;
         y += r * dy;
-        plot.lineTo(x, y);
-        if (draw_arrows && step % (2*arrow_step) == arrow_step) {
-          arrows.push([x, y, dx, dy]);
-        }
+        points.push([x,y])
         if (options.grid_points && options.grid_distance) {
           var d2 = options.grid_distance * options.grid_distance;
           var grid = options.grid_points;
@@ -89,9 +89,12 @@ export function odePlot(plot: ContextWrapper, fx: Fun2, fy: Fun2, x0: number, y0
           }
         }
       }
-      plot.ctx.stroke();
-      for (var i=0; i<arrows.length; ++i) {
-        plot.drawArrowHead(arrows[i][0], arrows[i][1], arrows[i][2], arrows[i][3]);
-      }
+      lines.push({
+        type: "line",
+        closed: false,
+        arrows: draw_arrows,
+        points,
+      })
     }
+    return lines
   }

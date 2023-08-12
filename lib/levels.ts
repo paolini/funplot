@@ -1,5 +1,4 @@
-import {Axes, Line, Lines} from "./axes"
-import {ContextWrapper} from "./plot"
+import {Axes, Lines, Point, Square as LinesSquare} from "./axes"
 
 type Fun = (x: number,y: number) => number 
 
@@ -31,7 +30,8 @@ function emptySquare(): Square {
   })
 }
 
-export default function levelPlot(plot: ContextWrapper, f: Fun) {
+export default function levelPlot(plot: Axes, f: Fun): Lines {
+  const draw_squares = false
   var squares: Square[] = [emptySquare()];
   // list of squares. Only add: index is identifier
   // index 0 is invalid
@@ -314,24 +314,20 @@ export default function levelPlot(plot: ContextWrapper, f: Fun) {
     }
   }
 
-  // draw squares
-  if (false) {
-    for (var n=1; n<squares.length;++n) {
-      var square = squares[n];
-      var x = square.x;
-      var y = square.y;
-      var l = square.l;
-      plot.ctx.beginPath();
-      plot.moveTo(x, y);
-      plot.lineTo(x+l,y);
-      plot.lineTo(x+l,y+l);
-      plot.lineTo(x,y+l);
-      plot.ctx.closePath();
-      plot.ctx.stroke();
-    }
-    plot.ctx.strokeStyle = "#f00";
-  }
+  const lines: Lines = []
 
+  // draw squares
+  if (draw_squares) {
+    const out: LinesSquare[] = []
+    for (var n=1; n<squares.length;++n) {
+      const {x,y,l} = squares[n]
+      out.push([[x,y], [l,l]])
+    }
+    lines.push({
+      type: "squares",
+      squares: out
+    })
+  }
 
   // step 3b: draw level lines
   for (var n=1;n<squares.length;++n) {
@@ -345,17 +341,18 @@ export default function levelPlot(plot: ContextWrapper, f: Fun) {
       // start curve from point in direction j
       var startxyt = zero_interpolation(square, j);
       var xyt = startxyt;
-      plot.ctx.beginPath();
-      plot.moveTo(xyt[0], xyt[1]);
+      let points: Point[] = []
+      points.push([xyt[0], xyt[1]])
       square.flag &= ~(1<<j);
       // draw first edge towards direction k, if applicable
       if (k!==j) {
         xyt = zero_interpolation(square, k);
-        plot.lineTo(xyt[0], xyt[1]);
+        points.push([xyt[0], xyt[1]]);
         square.flag &= ~(1<<k);
       }
       // start wandering in direction k
       var m = find_adjacent(square,k,xyt[2]);
+      var closed = false
       while (m !== 0) {
           square = squares[m];
           var k = (k+2)%4;
@@ -364,15 +361,21 @@ export default function levelPlot(plot: ContextWrapper, f: Fun) {
           if (kk < 4) {
             k = kk;
             xyt = zero_interpolation(square, k);
-            plot.lineTo(xyt[0], xyt[1])
+            points.push([xyt[0], xyt[1]])
             square.flag &= ~(1<<k);
             m = find_adjacent(square,k,xyt[2]);
           } else {
-            if (m==n) plot.ctx.closePath();
-            m = 0;
+            if (m==n) closed=true
+            m = 0
           }
       }
-      plot.ctx.stroke();
+      lines.push({
+        type: "line",
+        arrows: false,
+        closed,
+        points,
+      })
     }
   }
+  return lines
 }
