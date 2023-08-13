@@ -1,3 +1,7 @@
+## Try it online
+
+Here: [https://paolini.github.io/funplot/](https://paolini.github.io/funplot/)
+
 ## Development
 
 run the development server:
