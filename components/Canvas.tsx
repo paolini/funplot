@@ -5,18 +5,16 @@ import {useRef, useState, useEffect,
 import { Axes, ContextWrapper, canvasContext, translateAxes, zoomAxes } from '@/lib/plot'
 import { set, get, State } from '@/lib/State'
 import Coords from '@/lib/Coords'
-import { context } from '@/lib/plot'
-import { jsPDF } from 'jspdf'
-import { Lines } from '@/lib/axes'
 
-type PlotFunction = (ctx: ContextWrapper) => Promise<Lines>
+type PlotFunction = (ctx: ContextWrapper) => Promise<void>
 
-export default function Canvas({axes, plot, click, info}
+export default function Canvas({axes, resize, plot, click, move}
     :{
         axes: State<Axes>,
         plot: PlotFunction,
-        click: (coords: Coords) => void,
-        info: {x:number, y:number, width:number, height:number, exportPdf: () => void},
+        resize?: (width: number, height: number)=> void,
+        click?: (coords: Coords) => void,
+        move?: (coords: Coords) => void,
     }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [dragStart, setDragStart] = useState<{x: number, y:number}>({x:0, y:0})
@@ -24,8 +22,6 @@ export default function Canvas({axes, plot, click, info}
     const [moved, setMoved] = useState<boolean>(false)
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
     const [count, setCount] = useState<number>(0) // used to force a re-render
-    const [pending, setPending] = useState<{timeout: NodeJS.Timeout|null}>({timeout: null})
-    const [lines, setLines] = useState<{mutable: Lines}>({mutable: []})
 
     useEffect(() => {
         setCanvas(canvasRef.current)
@@ -36,29 +32,13 @@ export default function Canvas({axes, plot, click, info}
     if (canvas) {
         canvas.width = canvas.clientWidth
         canvas.height = canvas.clientHeight
-        info.width = canvas.width
-        info.height = canvas.height
-        info.exportPdf = exportPdf
+        if (resize) resize(canvas.width, canvas.height)
     }
 
     const ctx = canvas ? canvasContext(get(axes), canvas) : null
 
-    function draw(ctx: ContextWrapper, lines: Lines) {
-        ctx.clear()
-        ctx.drawAxes()
-        plotLines(ctx, lines)
-    }
-
     if (ctx) {
-        console.log('plot!')
-        draw(ctx, lines.mutable)
-        if (pending.timeout) clearTimeout(pending.timeout)
-        pending.timeout = setTimeout(async () => {
-            console.log('recompute')
-            const ls = await plot(ctx)
-            draw(ctx, ls)
-            lines.mutable = ls
-        }, 100)
+        plot(ctx)
     }
 
     function onWindowResize() {
@@ -79,8 +59,7 @@ export default function Canvas({axes, plot, click, info}
         if (dragging) {
             set(axes, translateAxes(get(axes), dragStart.x-pos.x, dragStart.y-pos.y))
         }
-        info.x = pos.x
-        info.y = pos.y
+        if (move) move(pos)
         setMoved(true)
     }
   
@@ -88,7 +67,7 @@ export default function Canvas({axes, plot, click, info}
         if (!ctx) return
         const pos = ctx.mouseCoords(evt);
         if (!moved) { // it's a click!
-            click(pos)
+            if (click) click(pos)
         }
         setMoved(false)
         setDragging(false)
@@ -103,41 +82,15 @@ export default function Canvas({axes, plot, click, info}
     function onScroll(evt: UIEvent<HTMLCanvasElement>) {
         console.log('onScroll')
         if (!ctx) return
-        zoom(-evt.detail, info.x, info.y)
+        zoom(-evt.detail, 0, 0)
     }
 
     function onWheel(evt: WheelEvent<HTMLCanvasElement>) {
+        if (!ctx) return
         var delta = -evt.deltaY/40 
-        zoom(delta, info.x, info.y)
+        const pos = ctx.mouseCoords(evt)
+        zoom(delta, pos.x, pos.y)
     }
-
-    function exportPdf() {
-        const width = canvas?.width || 640 
-        const height = canvas?.height || 480
-        const filename = 'funplot.pdf'
-        console.log(`export Pdf ${width}x${height}`)
-        const margin = 10
-        const doc = new jsPDF({
-            unit: 'pt',
-            format: [width+2*margin, height+2*margin],
-            orientation: (height > width ? 'p' : 'l')
-          })
-        doc.setLineJoin('rounded');
-        //  doc.line(20, 20, 60, 20) // horizontal line
-        //  doc.setLineWidth(0.5)
-      
-        const c = doc.context2d
-        c.autoPaging = false
-        console.log("autopaging: " + c.autoPaging)
-        //ctx.lineWidth = 1.0;
-        doc.setFontSize(10)
-        c.translate(margin, margin);
-        c.scale(1.0,1.0);
-        // doc.save("test.pdf")
-        const myctx = context(get(axes), width, height, c)
-        draw(myctx, lines.mutable)        
-        doc.save(filename)
-      }
 
     return <canvas 
             className="h-full w-full" 
@@ -151,48 +104,3 @@ export default function Canvas({axes, plot, click, info}
         />
 }
 
-function plotLines(plot: ContextWrapper, lines: Lines) {
-    const arrow_step = 80
-
-    lines.forEach(line => {
-      if (line.type === "line") {
-        plot.ctx.strokeStyle = line.color
-        plot.ctx.lineWidth = line.width
-        plot.ctx.beginPath()
-        line.points.forEach(([x,y], i) => {
-          if (i === 0) plot.moveTo(x,y)
-          else plot.lineTo(x,y)
-        })
-        if (line.closed) plot.ctx.closePath()
-        plot.ctx.stroke()
-        if (line.arrows) {
-            for (let i=arrow_step;i<line.points.length;i+=2*arrow_step) {
-                const [x, y] = line.points[i]
-                const [xx, yy] = line.points[i-1]
-                plot.drawArrowHead(x,y, x-xx,y-yy)
-            }
-        }
-      } else if (line.type === "squares") {
-        line.squares.forEach(([[x,y],[dx,dy]]) => {
-          plot.ctx.beginPath()
-          plot.moveTo(x, y)
-          plot.lineTo(x+dx,y)
-          plot.lineTo(x+dx,y+dy)
-          plot.lineTo(x,y+dy)
-          plot.ctx.closePath()
-          plot.ctx.stroke()
-        })
-        plot.ctx.strokeStyle = "#0ff"
-      } else if (line.type === "segments") {
-        plot.ctx.strokeStyle = line.color
-        plot.ctx.lineWidth = line.width
-        line.segments.forEach(([[x,y],[dx,dy]]) => {
-            plot.ctx.beginPath()
-            plot.moveTo(x,y)
-            plot.lineTo(x+dx,y+dy)
-            plot.ctx.stroke()
-            if (line.arrow) plot.drawArrowHead(x+dx,y+dy, dx,dy)
-        })
-      }
-    })
-  }  
