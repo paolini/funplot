@@ -1,9 +1,9 @@
 import { compile, parse } from 'mathjs'
 import assert from 'assert'
 
-import funGraph from '@/lib/funGraph'
-import levelPlot from './levels'
-import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/ode'
+import funGraph from '@/lib/plotGraph'
+import levelPlot from './plotLevels'
+import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/plotOde'
 import Coords from '@/lib/Coords'
 import { State, SetState, get, getField, update } from './State'
 import { Axes, Lines } from './axes'
