@@ -1,11 +1,11 @@
-import {useState } from 'react'
+import { useState } from 'react'
 import { HexColorPicker } from "react-colorful"
 import 'katex/dist/katex.min.css'
 import TeX from '@matejmazur/react-katex'
 import { FaTrash, FaArrowUp, FaArrowDown } from 'react-icons/fa'
 
 import { get, set, getField, update, onChange, onChangeBoolean, State } from '@/lib/State'
-import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, Figure } from '@/lib/figures'
+import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, Figure } from '@/lib/figures'
 import Coords from '@/lib/Coords'
 
 export function GraphPanel({state, figure, active, move}: 
@@ -136,9 +136,34 @@ export function OdeSystemPanel({state, figure, active, move} : {
     </PanelBand>
   }
 
+  export function ParameterPanel({state, figure, active, move}: 
+    {
+        state: State<ParameterState>,
+        figure: Figure,
+        active: State<boolean>,
+        move: (f: FigureState, n: number) => void,
+    }) {
+    const expr: State<string> = getField(state, 'expr')
+    const name: State<string> = getField(state, 'name')
+
+    return <PanelBand 
+                tex={figure.tex} 
+                active={active}
+                move={n => move(figure.state, n)}
+                >
+        <div className="flex flex-row px-2 items-center">
+            <Input expr={name} size={1} right={true}/>
+            <span>=</span>
+            <Input expr={expr} />
+            <Errors errors={figure.errors} />
+        </div>
+    </PanelBand>
+  }
+
+
 function PanelBand({active, color, children, tex, move}:{
     active: State<boolean>,
-    color: State<string>,
+    color?: State<string>,
     tex: string
     children: any,
     move: (n: number) => void,
@@ -169,21 +194,22 @@ function SlopeControl({value, color}:{
 }
 
 function ColorBlock({color, active, className}:{
-    color: State<string>,
+    color?: State<string>,
     active?: State<boolean>,
     className?: string,
 }) {
     const open = useState<boolean>(false)
     const isActive = active ? get(active) : true
+    const theColor = color ? get(color) : "#000"
     return <div className="inline">
         <div 
-            className={(className||"") + " w-5 h-5 rounded m-1"} 
-            style={{background: get(color)}}
+            className={`${className||""} w-5 h-5 ${color?'rounded':'rounded-full'} m-1`} 
+            style={{background: theColor}}
             onClick={() => (isActive?update(open, open => !open):(active && set(active, true)))}
         />
-        {isActive && get(open) && <HexColorPicker 
+        {isActive && get(open) && color && <HexColorPicker 
             className=""
-            color={get(color)} 
+            color={theColor} 
             onChange={_ => set(color, _)} 
             />}
     </div>
@@ -205,8 +231,19 @@ function Formula({tex,active}:{
         />
 }
 
-function Input({expr}: {expr: State<string>}){
-    return <input className="h-8 border p-1 bg-blue-100" type="text" value={get(expr)} onChange={onChange(expr)} />
+function Input({expr,size,right}:{
+    expr: State<string>,
+    size?: number,
+    right?: boolean,
+}){
+    return <input 
+        className="h-8 border p-1 bg-blue-100" 
+        style={{textAlign: right?'right':'left'}}
+        type="text" 
+        value={get(expr)} 
+        onChange={onChange(expr)} 
+        size={size || undefined}
+    />
 }
 
 function Checkbox({value, children}:{

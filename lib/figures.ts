@@ -1,12 +1,16 @@
 import { compile, parse } from 'mathjs'
 import assert from 'assert'
 
-import funGraph from '@/lib/plotGraph'
+import plotGraph from '@/lib/plotGraph'
 import levelPlot from './plotLevels'
 import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/plotOde'
 import Coords from '@/lib/Coords'
-import { State, SetState, get, getField, update } from './State'
+import { State, getField, update } from './State'
 import { Axes, Lines } from './axes'
+
+export type PlotParameters = {
+    [name: string]: number
+}
 
 export interface GraphFigureState {
     type: 'graph'
@@ -24,10 +28,10 @@ export interface ImplicitFigureState {
 export interface OdeFigureStateCommon {
     color: string
     slopeColor: string
-    drawSlope: boolean,
-    gridPoints: boolean,
-    gridCount: number, // 10
-    points: Coords[],
+    drawSlope: boolean
+    gridPoints: boolean
+    gridCount: number // 10
+    points: Coords[]
 }
 
 export interface OdeEquationFigureState extends OdeFigureStateCommon {
@@ -37,53 +41,69 @@ export interface OdeEquationFigureState extends OdeFigureStateCommon {
 
 export interface OdeSystemFigureState extends OdeFigureStateCommon {
     type: 'system'
-    exprX: string,
-    exprY: string,
-    drawArrows: boolean,
+    exprX: string
+    exprY: string
+    drawArrows: boolean
+}
+
+export interface ParameterState {
+    type: 'parameter'
+    expr: string
+    name: string
 }
 
 export type FigureState = 
     GraphFigureState |
     ImplicitFigureState |
     OdeEquationFigureState |
-    OdeSystemFigureState
+    OdeSystemFigureState |
+    ParameterState
 
 export interface Figure {
     state: FigureState
-    plot: (axes: Axes) => Promise<Lines>
+    eval: (parameters: PlotParameters) => void
+    plot: (axes: Axes, parameters: PlotParameters) => Promise<Lines>
     click: (state: State<FigureState>, point: Coords) => void
     tex: string,
     errors: string[]
 }
 
-export function figure(state: FigureState): Figure {
+export function createFigure(state: FigureState, parameters: string[]): Figure {
     switch(state.type) {
         case 'graph':
-            return graphFigure(state)
+            return graphFigure(state, parameters)
         case 'implicit':
-            return implicitFigure(state)
+            return implicitFigure(state, parameters)
         case 'ode':
-            return odeEquationFigure(state)
+            return odeEquationFigure(state, parameters)
         case 'system':
-            return odeSystemFigure(state)
+            return odeSystemFigure(state, parameters)
+        case 'parameter':
+            return parameterFigure(state, parameters)
     }
 }
 
-function graphFigure(state: GraphFigureState): Figure {
+function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
     let fun: ((x:number) => number) | null = null
     let errors: string[] = []
     let tex = ''
-    try {
-        const compiledExpr = compile(state.expr)
+    let compiledExpr: math.EvalFunction | null = null
+
+    function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
         if (state.inverted) {
-            fun = y => compiledExpr.evaluate({y})
+            return (y: number) => compiledExpr.evaluate({...parameters, y})
         } else {
-            fun = x => compiledExpr.evaluate({x})
+            return (x: number) => compiledExpr.evaluate({...parameters, x})
         }
+    }
+
+    try {
+        compiledExpr = compile(state.expr)
+        fun = getFun(compiledExpr, Object.fromEntries(parameters.map(p => [p, 0.0])))
         fun(0) // check if it is working
     } catch(e) {
         fun = null
-        errors.push(`${e}`)
+        errors.push(`graph ${e}`)
     }
     try {
         tex = `${state.inverted ? 'x' : 'y'} = ${parse(state.expr).toTex()}`
@@ -92,10 +112,11 @@ function graphFigure(state: GraphFigureState): Figure {
         tex = `\\text{parse error}`
     }
     
-    async function plot(axes: Axes) {
-        if (!fun) return []
+    async function plot(axes: Axes, parameters: PlotParameters) {
+        if (!compiledExpr) return []
         try {
-            return funGraph(axes, fun, state.inverted, state.color)
+            const fun = getFun(compiledExpr, parameters)
+            return plotGraph(axes, fun, state.inverted, state.color)
         } catch(e) {
             console.error(e)
             return []
@@ -105,19 +126,26 @@ function graphFigure(state: GraphFigureState): Figure {
     function click(state: State<FigureState>, point: Coords) {
     }
 
-    return { state, plot, click, tex, errors }
+    function eval_(parameters: PlotParameters) {}
+
+    return { state, eval: eval_, plot, click, tex, errors }
 }
 
-function implicitFigure(state: ImplicitFigureState): Figure {
-    let fun: ((x:number, y:number) => number) | null = null
+function implicitFigure(state: ImplicitFigureState, parameters: string[]): Figure {
     let errors: string[] = []
     let tex = ''
+    let compiledExpr: math.EvalFunction|null = null
+
+    function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+        return (x: number, y:number) => compiledExpr.evaluate({...parameters, x, y})       
+    }
+    
     try {
-        const compiledExpr = compile(state.expr)
-        fun = (x,y) => compiledExpr.evaluate({x, y})
+        compiledExpr = compile(state.expr)
+        const fun = getFun(compiledExpr, Object.fromEntries(parameters.map(p=>[p,0])))
         fun(0,0) // check if it is working
     } catch(e) {
-        fun = null
+        compiledExpr = null
         errors.push(`${e}`)
     }
     try {
@@ -127,9 +155,10 @@ function implicitFigure(state: ImplicitFigureState): Figure {
         tex = `\\text{parse error}`
     }
 
-    async function plot(axes: Axes) {
-        if (!fun) return []
+    async function plot(axes: Axes, parameters: PlotParameters) {
+        if (!compiledExpr) return []
         try {
+            const fun = getFun(compiledExpr, parameters)
             return levelPlot(axes, fun, state.color)
         } catch(e) {
             console.error(e)
@@ -137,20 +166,28 @@ function implicitFigure(state: ImplicitFigureState): Figure {
         }    
     }
 
+    function eval_(parameters: PlotParameters) {}
+
     function click(state: State<FigureState>, point: Coords) {}
-    return {state, plot, click, tex, errors}
+
+    return {state, eval: eval_, plot, click, tex, errors}
 }
 
-function odeEquationFigure(state: OdeEquationFigureState): Figure {
-    let fun: ((x:number, y:number) => number) | null = null
+function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]): Figure {
     let errors: string[] = []
+    let compiledExpr: math.EvalFunction|null = null
     let tex = ''
+
+    function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+        return (x: number, y: number) => compiledExpr.evaluate({...parameters, x, y})
+    }
+
     try {
-        const compiledExpr = compile(state.expr)
-        fun = (x,y) => compiledExpr.evaluate({x, y})
+        compiledExpr = compile(state.expr)
+        const fun = getFun(compiledExpr, Object.fromEntries(parameters.map(p=>[p,0])))
         fun(0,0) // try if it is working
     } catch(e) {
-        fun = null
+        compiledExpr = null
         errors.push(`${e}`)
     }
     try {
@@ -160,8 +197,9 @@ function odeEquationFigure(state: OdeEquationFigureState): Figure {
         tex = `\\text{parse error}`
     }
 
-    async function plot(ctx: Axes) {
-        if (!fun) return []
+    async function plot(ctx: Axes, parameters: PlotParameters) {
+        if (!compiledExpr) return []
+        const fun = getFun(compiledExpr, parameters)
         const fx = (x: number, y: number) => 1.0            
         return await odePlotHelper(ctx, state, fx, fun, true)
     }
@@ -173,24 +211,32 @@ function odeEquationFigure(state: OdeEquationFigureState): Figure {
         update<Coords[]>(points, points => [...points, point])
     }
 
-    return {state, plot, click, tex, errors}
+    function eval_(parameters: PlotParameters) {}
+
+    return {state, eval: eval_, plot, click, tex, errors}
 }
 
-function odeSystemFigure(state: OdeSystemFigureState): Figure {
-    let funX: ((x:number, y:number) => number) | null = null
-    let funY: ((x:number, y:number) => number) | null = null
+function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): Figure {
     let errors: string[] = []
     let tex = ''
+    let compiledExprX: math.EvalFunction|null = null
+    let compiledExprY: math.EvalFunction|null = null
+
+    function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+        return (x:number, y:number) => compiledExpr.evaluate({...parameters, x, y})
+    }
+
     try {
-        const compiledExprX = compile(state.exprX)
-        const compiledExprY = compile(state.exprY)
-        funX = (x,y) => compiledExprX.evaluate({x, y})
-        funY = (x,y) => compiledExprY.evaluate({x, y})
+        compiledExprX = compile(state.exprX)
+        compiledExprY = compile(state.exprY)
+        const parameters = Object.fromEntries(parameterList.map(p=>[p,0]))
+        const funX = getFun(compiledExprX, parameters)
+        const funY = getFun(compiledExprY, parameters)
         funX(0,0) // check if it is working
         funY(0,0)
     } catch(e) {
-        funX = null
-        funY = null
+        compiledExprX = null
+        compiledExprY = null
         errors.push(`${e}`)
     }
     try {
@@ -204,10 +250,11 @@ function odeSystemFigure(state: OdeSystemFigureState): Figure {
         tex=`\\text{parse error}`
     }
 
-    async function plot(ctx: Axes) {
-        if (funX && funY) {
-            return await odePlotHelper(ctx, state, funX, funY, false)
-        } else return []
+    async function plot(ctx: Axes, parameters: PlotParameters) {
+        if (!(compiledExprX && compiledExprY)) return []
+        const funX = getFun(compiledExprX, parameters)
+        const funY = getFun(compiledExprY, parameters)
+        return await odePlotHelper(ctx, state, funX, funY, false)
     }
 
     function click(statePair: State<FigureState>, point: Coords) {
@@ -217,7 +264,9 @@ function odeSystemFigure(state: OdeSystemFigureState): Figure {
         update<Coords[]>(points, points => [...points, point])
     }
 
-    return {state, plot, click, tex, errors}
+    function eval_(parameters: PlotParameters) {}
+
+    return {state, eval: eval_, plot, click, tex, errors}
 }
 
 async function odePlotHelper(ctx: Axes, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
@@ -264,3 +313,39 @@ async function odePlotHelper(ctx: Axes, state: OdeFigureStateCommon, fx: Fun2, f
     }    
 }
 
+function parameterFigure(state: ParameterState, parameters: string[]): Figure {
+    let errors: string[] = []
+    let tex = ''
+    let compiledExpr: math.EvalFunction|null = null
+
+    function getVal(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+        return compiledExpr.evaluate(parameters)
+    }
+
+    try {
+        compiledExpr = compile(state.expr)
+        getVal(compiledExpr, Object.fromEntries(parameters.map(p => [p, 0.0])))
+    } catch(e) {
+        errors.push(`${e}`)
+    }
+    try {
+        tex = `${state.name} = ${parse(state.expr).toTex()}`
+        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
+    } catch(e) {
+        tex = `\\text{parse error}`
+    }
+    
+    async function plot(axes: Axes, parameters: PlotParameters) {
+        return []
+    }
+
+    function click(state: State<FigureState>, point: Coords) {}
+
+    function eval_(parameters: PlotParameters) {
+        if (!compiledExpr) return
+        const value = getVal(compiledExpr, parameters)
+        parameters[state.name] = value
+    }
+
+    return { state, eval: eval_, plot, click, tex, errors }
+}

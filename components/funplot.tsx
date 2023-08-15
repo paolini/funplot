@@ -8,8 +8,8 @@ import { ContextWrapper } from '@/lib/plot'
 import { get, set, getField, update, map, extract, State, } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
-import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, figure, } from '@/lib/figures'
-import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel } from '@/components/panels'
+import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, createFigure } from '@/lib/figures'
+import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, ParameterPanel } from '@/components/panels'
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
 import { Lines } from '@/lib/axes'
@@ -31,7 +31,12 @@ export default function Funplot() {
         loadFromHash()
     }, [])
 
-    const figures = get(panelsPair).map(p => figure(p.figure))
+    const parameterList: string[] = get(panelsPair)
+        .map(panel => panel.figure)
+        .filter((figure: FigureState): figure is ParameterState => figure.type === 'parameter')
+        .map(f => f.name)
+
+    const figures = get(panelsPair).map(p => createFigure(p.figure, parameterList))
 
     useEffect(() => {
         console.log("changed!")
@@ -43,12 +48,14 @@ export default function Funplot() {
         <div className="flex flex-row">
             <span className="font-bold mx-1">FunPlot</span>
             <select value="" className="border mx-1" onChange={evt => newPanel(evt.target.value)}>
-                <option value="">choose plot type</option>
+                <option value="" disabled={true}>choose plot type</option>
                 <option value="graph">graph y=f(x)</option>
                 <option value="graph_inverted">graph x=f(y)</option>
                 <option value="implicit">level curve f(x,y)=0</option>
                 <option value="ode_equation">ODE equation</option>
                 <option value="ode_system">ODE system</option>
+                <option value="" disabled={true}>-------</option>
+                <option value="parameter">new parameter</option>
             </select>
             <select value="" className="border mx-1" onChange={evt => performAction(evt.target.value)}>
                 <option value="">choose action</option>
@@ -111,6 +118,11 @@ export default function Funplot() {
                     gp: true,
                     l: [],
                 }
+                case 'parameter': return {
+                    t: 'parameter',
+                    n: 'c',
+                    e: '1',
+                }
             }
             assert(false,`invalid figure type ${type}`)
         })(value))
@@ -157,8 +169,16 @@ export default function Funplot() {
             pending.timeout = setTimeout(async () => {
                 console.log('recompute')
                 let mylines: Lines = []
+                const parameters = Object.fromEntries(parameterList.map(p => [p,0]))
+
+                // set parameters
                 for(const figure of figures) {
-                    mylines = mylines.concat(await figure.plot(ctx))
+                    figure.eval(parameters)
+                }
+
+                // plot
+                for(const figure of figures) {
+                    mylines = mylines.concat(await figure.plot(ctx, parameters))
                 }
                 setLines(mylines)
                 set(drawCount, get(updateCount))
@@ -244,6 +264,12 @@ export default function Funplot() {
                             active={active}
                             move={move}
                         />
+                case 'parameter':
+                    return <ParameterPanel key={panel.key} state={extractFigurePairFromPanels<ParameterState>(panelsPair, state)}
+                        figure={figures[i]}
+                        active={active}
+                        move={move}
+                        />
             }
         })
     }
@@ -307,7 +333,18 @@ type OdeSystemOptions = {
     l: [number,number][], // points
 }
 
-type Options = GraphOptions | ImplicitOptions | OdeEquationOptions | OdeSystemOptions
+type ParameterOptions = {
+    t: 'parameter',
+    e: string, // expr
+    n: string, // name
+}
+
+type Options 
+    = GraphOptions 
+    | ImplicitOptions 
+    | OdeEquationOptions 
+    | OdeSystemOptions 
+    | ParameterOptions
 
 function newFigureState(opts: Options): FigureState { 
     switch(opts.t) {
@@ -326,7 +363,7 @@ function newFigureState(opts: Options): FigureState {
             type: 'ode',
             color: opts.c,
             slopeColor: opts.sc,
-            expr: "y^2+x",
+            expr: opts.e,
             drawSlope: false,
             gridPoints: true,
             gridCount: 20,
@@ -334,15 +371,20 @@ function newFigureState(opts: Options): FigureState {
         }
         case 'ode_system': return {
             type: 'system',
-            exprX: "y",
-            exprY: "-sin(x)-y",
-            color: "#4A90E2",
-            slopeColor: "#7ED321",
+            exprX: opts.ex,
+            exprY: opts.ey,
+            color: opts.c,
+            slopeColor: opts.sc,
             drawSlope: opts.ds,
             drawArrows: opts.da,
             gridPoints: opts.gp,
             gridCount: 20,
             points: opts.l.map(([x,y]) => ({x,y})),
+        }
+        case 'parameter': return {
+            type: 'parameter',
+            expr: opts.e,
+            name: opts.n,
         }
     }
 }
@@ -380,6 +422,11 @@ function panelToOptions(panel: IPanel): Options {
             da: state.drawArrows,
             gp: state.gridPoints,
             l: state.points.map(p => [p.x,p.y]),
+        }
+        case 'parameter': return {
+            t: 'parameter',
+            e: state.expr,
+            n: state.name,
         }
     }
 }
