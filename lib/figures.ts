@@ -83,6 +83,31 @@ export function createFigure(state: FigureState, parameters: string[]): Figure {
     }
 }
 
+function getFunX(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+    const vars = {...parameters, x:0}
+    return (x: number) => {
+        vars.x = x
+        return compiledExpr.evaluate(vars)
+    }
+}
+
+function getFunY(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+    const vars = {...parameters, y:0}
+    return (y: number) => {
+        vars.y = y
+        return compiledExpr.evaluate(vars)
+    }
+}
+
+function getFunXY(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+    const vars = {...parameters,x:0,y:0}
+    return (x: number, y: number) => {
+        vars.x = x
+        vars.y = y
+        return compiledExpr.evaluate(vars)
+    }
+}
+
 function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
     let fun: ((x:number) => number) | null = null
     let errors: string[] = []
@@ -90,11 +115,8 @@ function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
     let compiledExpr: math.EvalFunction | null = null
 
     function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
-        if (state.inverted) {
-            return (y: number) => compiledExpr.evaluate({...parameters, y})
-        } else {
-            return (x: number) => compiledExpr.evaluate({...parameters, x})
-        }
+        if (state.inverted) return getFunY(compiledExpr, parameters)
+        else return getFunX(compiledExpr, parameters)
     }
 
     try {
@@ -178,13 +200,9 @@ function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]):
     let compiledExpr: math.EvalFunction|null = null
     let tex = ''
 
-    function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
-        return (x: number, y: number) => compiledExpr.evaluate({...parameters, x, y})
-    }
-
     try {
         compiledExpr = compile(state.expr)
-        const fun = getFun(compiledExpr, Object.fromEntries(parameters.map(p=>[p,0])))
+        const fun = getFunXY(compiledExpr, Object.fromEntries(parameters.map(p=>[p,0])))
         fun(0,0) // try if it is working
     } catch(e) {
         compiledExpr = null
@@ -199,7 +217,7 @@ function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]):
 
     async function plot(ctx: Axes, parameters: PlotParameters) {
         if (!compiledExpr) return []
-        const fun = getFun(compiledExpr, parameters)
+        const fun = getFunXY(compiledExpr, parameters)
         const fx = (x: number, y: number) => 1.0            
         return await odePlotHelper(ctx, state, fx, fun, true)
     }
@@ -222,16 +240,12 @@ function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): 
     let compiledExprX: math.EvalFunction|null = null
     let compiledExprY: math.EvalFunction|null = null
 
-    function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
-        return (x:number, y:number) => compiledExpr.evaluate({...parameters, x, y})
-    }
-
     try {
         compiledExprX = compile(state.exprX)
         compiledExprY = compile(state.exprY)
         const parameters = Object.fromEntries(parameterList.map(p=>[p,0]))
-        const funX = getFun(compiledExprX, parameters)
-        const funY = getFun(compiledExprY, parameters)
+        const funX = getFunXY(compiledExprX, parameters)
+        const funY = getFunXY(compiledExprY, parameters)
         funX(0,0) // check if it is working
         funY(0,0)
     } catch(e) {
@@ -252,8 +266,8 @@ function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): 
 
     async function plot(ctx: Axes, parameters: PlotParameters) {
         if (!(compiledExprX && compiledExprY)) return []
-        const funX = getFun(compiledExprX, parameters)
-        const funY = getFun(compiledExprY, parameters)
+        const funX = getFunXY(compiledExprX, parameters)
+        const funY = getFunXY(compiledExprY, parameters)
         return await odePlotHelper(ctx, state, funX, funY, false)
     }
 
