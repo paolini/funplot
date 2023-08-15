@@ -82,15 +82,14 @@ function graphFigure(state: GraphFigureState): Figure {
         }
         fun(0) // check if it is working
     } catch(e) {
-        console.error(e)
+        fun = null
         errors.push(`${e}`)
     }
     try {
         tex = `${state.inverted ? 'x' : 'y'} = ${parse(state.expr).toTex()}`
         // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
     } catch(e) {
-        console.error(e)
-        errors.push(`${e}`)
+        tex = `\\text{parse error}`
     }
     
     async function plot(axes: Axes) {
@@ -118,13 +117,14 @@ function implicitFigure(state: ImplicitFigureState): Figure {
         fun = (x,y) => compiledExpr.evaluate({x, y})
         fun(0,0) // check if it is working
     } catch(e) {
+        fun = null
         errors.push(`${e}`)
     }
     try {
         tex = `${parse(state.expr).toTex()} = 0`
         // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
     } catch(e) {
-        errors.push(`${e}`)
+        tex = `\\text{parse error}`
     }
 
     async function plot(axes: Axes) {
@@ -138,6 +138,85 @@ function implicitFigure(state: ImplicitFigureState): Figure {
     }
 
     function click(state: State<FigureState>, point: Coords) {}
+    return {state, plot, click, tex, errors}
+}
+
+function odeEquationFigure(state: OdeEquationFigureState): Figure {
+    let fun: ((x:number, y:number) => number) | null = null
+    let errors: string[] = []
+    let tex = ''
+    try {
+        const compiledExpr = compile(state.expr)
+        fun = (x,y) => compiledExpr.evaluate({x, y})
+        fun(0,0) // try if it is working
+    } catch(e) {
+        fun = null
+        errors.push(`${e}`)
+    }
+    try {
+        tex = `y' = ${parse(state.expr.replace(/y/g,'y')).toTex()}`                        
+        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
+    } catch(e) {
+        tex = `\\text{parse error}`
+    }
+
+    async function plot(ctx: Axes) {
+        if (!fun) return []
+        const fx = (x: number, y: number) => 1.0            
+        return await odePlotHelper(ctx, state, fx, fun, true)
+    }
+
+    function click(statePair: State<FigureState>, point: Coords) {
+        assert(statePair[0].type === 'ode')
+        const odePair: State<OdeEquationFigureState> = statePair as State<OdeEquationFigureState>
+        const points = getField(odePair, 'points')
+        update<Coords[]>(points, points => [...points, point])
+    }
+
+    return {state, plot, click, tex, errors}
+}
+
+function odeSystemFigure(state: OdeSystemFigureState): Figure {
+    let funX: ((x:number, y:number) => number) | null = null
+    let funY: ((x:number, y:number) => number) | null = null
+    let errors: string[] = []
+    let tex = ''
+    try {
+        const compiledExprX = compile(state.exprX)
+        const compiledExprY = compile(state.exprY)
+        funX = (x,y) => compiledExprX.evaluate({x, y})
+        funY = (x,y) => compiledExprY.evaluate({x, y})
+        funX(0,0) // check if it is working
+        funY(0,0)
+    } catch(e) {
+        funX = null
+        funY = null
+        errors.push(`${e}`)
+    }
+    try {
+        tex = `
+            \\begin{cases}
+            x' = ${parse(state.exprX).toTex()} \\\\
+            y' = ${parse(state.exprY).toTex()} \\\\
+            \\end{cases}`
+        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
+    } catch(e) {
+        tex=`\\text{parse error}`
+    }
+
+    async function plot(ctx: Axes) {
+        if (funX && funY) {
+            return await odePlotHelper(ctx, state, funX, funY, false)
+        } else return []
+    }
+
+    function click(statePair: State<FigureState>, point: Coords) {
+        assert(statePair[0].type === 'system')
+        const systemPair: State<OdeSystemFigureState> = statePair as State<OdeSystemFigureState>
+        const points = getField(systemPair, 'points')
+        update<Coords[]>(points, points => [...points, point])
+    }
+
     return {state, plot, click, tex, errors}
 }
 
@@ -185,78 +264,3 @@ async function odePlotHelper(ctx: Axes, state: OdeFigureStateCommon, fx: Fun2, f
     }    
 }
 
-function odeEquationFigure(state: OdeEquationFigureState): Figure {
-    let fun: ((x:number, y:number) => number) | null = null
-    let errors: string[] = []
-    let tex = ''
-    try {
-        const compiledExpr = compile(state.expr)
-        fun = (x,y) => compiledExpr.evaluate({x, y})
-        fun(0,0) // try if it is working
-    } catch(e) {
-        errors.push(`${e}`)
-    }
-    try {
-        tex = `y' = ${parse(state.expr.replace(/y/g,'y')).toTex()}`                        
-        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
-    } catch(e) {
-        errors.push(`${e}`)
-    }
-
-    async function plot(ctx: Axes) {
-        if (!fun) return []
-        const fx = (x: number, y: number) => 1.0            
-        return await odePlotHelper(ctx, state, fx, fun, true)
-    }
-
-    function click(statePair: State<FigureState>, point: Coords) {
-        assert(statePair[0].type === 'ode')
-        const odePair: State<OdeEquationFigureState> = statePair as State<OdeEquationFigureState>
-        const points = getField(odePair, 'points')
-        update<Coords[]>(points, points => [...points, point])
-    }
-
-    return {state, plot, click, tex, errors}
-}
-
-function odeSystemFigure(state: OdeSystemFigureState): Figure {
-    let funX: ((x:number, y:number) => number) | null = null
-    let funY: ((x:number, y:number) => number) | null = null
-    let errors: string[] = []
-    let tex = ''
-    try {
-        const compiledExprX = compile(state.exprX)
-        const compiledExprY = compile(state.exprY)
-        funX = (x,y) => compiledExprX.evaluate({x, y})
-        funY = (x,y) => compiledExprY.evaluate({x, y})
-        funX(0,0) // check if it is working
-        funY(0,0)
-    } catch(e) {
-        errors.push(`${e}`)
-    }
-    try {
-        tex = `
-            \\begin{cases}
-            x' = ${parse(state.exprX).toTex()} \\\\
-            y' = ${parse(state.exprY).toTex()} \\\\
-            \\end{cases}`
-        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
-    } catch(e) {
-        errors.push(`${e}`)
-    }
-
-    async function plot(ctx: Axes) {
-        if (funX && funY) {
-            return await odePlotHelper(ctx, state, funX, funY, false)
-        } else return []
-    }
-
-    function click(statePair: State<FigureState>, point: Coords) {
-        assert(statePair[0].type === 'system')
-        const systemPair: State<OdeSystemFigureState> = statePair as State<OdeSystemFigureState>
-        const points = getField(systemPair, 'points')
-        update<Coords[]>(points, points => [...points, point])
-    }
-
-    return {state, plot, click, tex, errors}
-}

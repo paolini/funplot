@@ -27,6 +27,7 @@ export function GraphPanel({state, figure, active, move}:
         <div className="flex flex-row px-2 items-center">
             <span>{get(state).inverted?'x=f(y)=':'y=f(x)='}</span>
             <Input expr={expr} />
+            <Errors errors={figure.errors} />
         </div>
     </PanelBand>
   }
@@ -49,6 +50,7 @@ export function ImplicitPanel({state, figure, active, move}:
             >
         <span>y(x)=</span>
         <Input expr={expr} />
+        <Errors errors={figure.errors}/>
     </PanelBand>
   }
 
@@ -77,6 +79,7 @@ export function OdeEquationPanel({state, figure, active, move}:
                 <Separator />
                 <span>y&apos; = </span>
                 <Input expr={expr}/>
+                <Errors errors={figure.errors} />
             </div>
             <Points points={getField(state, 'points')} gridPoints={get(gridPoints)} />
         </div>
@@ -126,6 +129,7 @@ export function OdeSystemPanel({state, figure, active, move} : {
                         </td>
                     </tr></tbody>
                 </table>
+                <Errors errors={figure.errors} />
             </div>
             <Points points={points} gridPoints={get(gridPoints)} />
         </div>
@@ -232,5 +236,14 @@ function Points({points, gridPoints}:
         : (!gridPoints && <span className="online bg-red-300"> click on picture to draw an integral line or check &apos;fill plane&apos;
           </span>)
     }
+    </div>
+}
+
+function Errors({errors}:{
+    errors: string[]
+}) {
+    if (errors.length===0) return null
+    return <div className="bg-red-200">
+        { errors.map((error,i) => <div className="" key={i}>{error}</div>)}
     </div>
 }
