@@ -85,7 +85,8 @@ export function odePlot(plot: Axes, fx: Fun2, fy: Fun2, x0: number, y0: number, 
         const l = dt / v
 
         // useful with equations like y'=1/cos(y)
-        if (equation && dy0*dy1 < - sqr(dt)) {
+        // but check with y' = x*y
+        if (equation && dy0*dy1 < - sqr(plot.radius)) {
           break
         }
 
