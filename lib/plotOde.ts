@@ -1,10 +1,10 @@
-import { Axes, Lines, Line, Point, Segment } from './axes'
-
+import { Lines, Line, Point, Segment } from './lines'
+import { AxesWrapper } from './plot';
 export default odePlot
 
 export type Fun2 = (x: number, y: number) => number
 
-export function slopeGraph(plot: Axes, fx: Fun2, fy: Fun2, draw_arrows: boolean, color: string): Line {
+export function slopeGraph(plot: AxesWrapper, fx: Fun2, fy: Fun2, draw_arrows: boolean, color: string): Line {
     var xmin = plot.x_pixel(0);
     var ymin = plot.y_pixel(plot.height);
     var xmax = plot.x_pixel(plot.width);
@@ -41,7 +41,7 @@ export type OdePlotOptions = {
     color: string,
   }
 
-export function odePlot(plot: Axes, fx: Fun2, fy: Fun2, x0: number, y0: number, options: OdePlotOptions): Line {
+export function odePlot(plot: AxesWrapper, fx: Fun2, fy: Fun2, x0: number, y0: number, options: OdePlotOptions): Line {
     var xmin = plot.x_pixel(0);
     var ymin = plot.y_pixel(plot.height);
     var xmax = plot.x_pixel(plot.width);

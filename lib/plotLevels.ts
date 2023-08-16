@@ -1,4 +1,5 @@
-import {Axes, Lines, Point, Square as LinesSquare} from "./axes"
+import { Lines, Point, Square as LinesSquare} from "./lines"
+import { AxesWrapper } from "./plot"
 
 type Fun = (x: number,y: number) => number 
 
@@ -30,7 +31,7 @@ function emptySquare(): Square {
   })
 }
 
-export default function levelPlot(plot: Axes, f: Fun, color: string): Lines {
+export default function levelPlot(plot: AxesWrapper, f: Fun, color: string): Lines {
   const draw_squares = false
   var squares: Square[] = [emptySquare()];
   // list of squares. Only add: index is identifier

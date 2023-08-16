@@ -6,7 +6,8 @@ import levelPlot from './plotLevels'
 import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/plotOde'
 import Coords from '@/lib/Coords'
 import { State, getField, update } from './State'
-import { Axes, Lines } from './axes'
+import { Lines } from './lines'
+import { AxesWrapper } from './plot'
 
 export type PlotParameters = {
     [name: string]: number
@@ -25,15 +26,6 @@ export interface ImplicitFigureState {
     expr: string
 }
 
-export interface OdeFigureStateCommon {
-    color: string
-    slopeColor: string
-    drawSlope: boolean
-    gridPoints: boolean
-    gridCount: number // 10
-    points: Coords[]
-}
-
 export interface OdeEquationFigureState extends OdeFigureStateCommon {
     type: 'ode'
     expr: string
@@ -46,10 +38,21 @@ export interface OdeSystemFigureState extends OdeFigureStateCommon {
     drawArrows: boolean
 }
 
+export interface OdeFigureStateCommon {
+    color: string
+    slopeColor: string
+    drawSlope: boolean
+    gridPoints: boolean
+    gridCount: number // 10
+    points: Coords[]
+}
+
 export interface ParameterState {
     type: 'parameter'
     expr: string
     name: string
+    min: number
+    max: number
 }
 
 export type FigureState = 
@@ -62,7 +65,7 @@ export type FigureState =
 export interface Figure {
     state: FigureState
     eval: (parameters: PlotParameters) => void
-    plot: (axes: Axes, parameters: PlotParameters) => Promise<Lines>
+    plot: (axes: AxesWrapper, parameters: PlotParameters) => Promise<Lines>
     click: (state: State<FigureState>, point: Coords) => void
     tex: string,
     errors: string[]
@@ -134,7 +137,7 @@ function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
         tex = `\\text{parse error}`
     }
     
-    async function plot(axes: Axes, parameters: PlotParameters) {
+    async function plot(axes: AxesWrapper, parameters: PlotParameters) {
         if (!compiledExpr) return []
         try {
             const fun = getFun(compiledExpr, parameters)
@@ -177,7 +180,7 @@ function implicitFigure(state: ImplicitFigureState, parameters: string[]): Figur
         tex = `\\text{parse error}`
     }
 
-    async function plot(axes: Axes, parameters: PlotParameters) {
+    async function plot(axes: AxesWrapper, parameters: PlotParameters) {
         if (!compiledExpr) return []
         try {
             const fun = getFun(compiledExpr, parameters)
@@ -215,7 +218,7 @@ function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]):
         tex = `\\text{parse error}`
     }
 
-    async function plot(ctx: Axes, parameters: PlotParameters) {
+    async function plot(ctx: AxesWrapper, parameters: PlotParameters) {
         if (!compiledExpr) return []
         const fun = getFunXY(compiledExpr, parameters)
         const fx = (x: number, y: number) => 1.0            
@@ -264,7 +267,7 @@ function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): 
         tex=`\\text{parse error}`
     }
 
-    async function plot(ctx: Axes, parameters: PlotParameters) {
+    async function plot(ctx: AxesWrapper, parameters: PlotParameters) {
         if (!(compiledExprX && compiledExprY)) return []
         const funX = getFunXY(compiledExprX, parameters)
         const funY = getFunXY(compiledExprY, parameters)
@@ -283,7 +286,7 @@ function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): 
     return {state, eval: eval_, plot, click, tex, errors}
 }
 
-async function odePlotHelper(ctx: Axes, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
+async function odePlotHelper(ctx: AxesWrapper, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
     try {
         var options: OdePlotOptions = {
             draw_arrows: !equation,
@@ -349,7 +352,7 @@ function parameterFigure(state: ParameterState, parameters: string[]): Figure {
         tex = `\\text{parse error}`
     }
     
-    async function plot(axes: Axes, parameters: PlotParameters) {
+    async function plot(axes: AxesWrapper, parameters: PlotParameters) {
         return []
     }
 

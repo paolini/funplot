@@ -4,7 +4,7 @@ import 'katex/dist/katex.min.css'
 import TeX from '@matejmazur/react-katex'
 import { FaTrash, FaArrowUp, FaArrowDown } from 'react-icons/fa'
 
-import { get, set, getField, update, onChange, onChangeBoolean, State } from '@/lib/State'
+import { get, set, getField, update, onChange, onChangeBoolean, onChangeNumber, State } from '@/lib/State'
 import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, Figure } from '@/lib/figures'
 import Coords from '@/lib/Coords'
 
@@ -145,6 +145,8 @@ export function OdeSystemPanel({state, figure, active, move} : {
     }) {
     const expr: State<string> = getField(state, 'expr')
     const name: State<string> = getField(state, 'name')
+    const min: State<number> = getField(state, 'min')
+    const max: State<number> = getField(state, 'max')
 
     return <PanelBand 
                 tex={figure.tex} 
@@ -155,6 +157,18 @@ export function OdeSystemPanel({state, figure, active, move} : {
             <Input expr={name} size={1} right={true}/>
             <span>=</span>
             <Input expr={expr} />
+            <div className="m-2"/>
+            <InputNumber expr={min} size={1}/>
+            <input 
+                type="range" 
+                className="slider" 
+                value={get(expr)} 
+                min={get(min)}
+                max={get(max)}
+                step={0.001*(get(max)-get(min))}
+                onChange={onChange(expr)}
+            />
+            <InputNumber expr={max} size={1}/>
             <Errors errors={figure.errors} />
         </div>
     </PanelBand>
@@ -242,6 +256,33 @@ function Input({expr,size,right}:{
         type="text" 
         value={get(expr)} 
         onChange={onChange(expr)} 
+        size={size || undefined}
+    />
+}
+
+function InputNumber({expr,size,right}:{
+    expr: State<number>,
+    size?: number,
+    right?: boolean,
+}){
+    const value = useState<string>(`${get(expr)}`)
+    const error=useState<boolean>(false)
+    return <input 
+        className={`h-8 border p-1 ${get(error)?'bg-red-300':'bg-blue-100'}`}
+        style={{textAlign: right?'right':'left'}}
+        type="text" 
+        value={get(value)} 
+        onChange={(evt) => {
+            const s = evt.target.value
+            const v = parseFloat(s)
+            if (isNaN(v)) {
+                set(error, true)
+            } else {
+                set(error, false)
+                set(value, s)
+                set(expr, v)
+            }
+        }}
         size={size || undefined}
     />
 }

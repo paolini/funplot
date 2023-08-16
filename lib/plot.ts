@@ -26,32 +26,31 @@ export interface DrawingContext {
   font: string,
 }
 
-/**
- * wrapping to underlying context
- * in axes coordinates
- */
-export interface ContextWrapper {
-  ctx: DrawingContext,
-  width: number,
-  height: number,
-  scale: number,
-  x0: number,
-  y0: number,
-  radius: number,
-
+export interface AxesWrapper {
   xMin: number,
   xMax: number,
   yMin: number,
   yMax: number,
-  xCenter: number,
-  yCenter: number,
-  xoff: number,
-  yoff: number,
+  height: number,
+  width: number,
+  radius: number,
+
+  x_pixel: (x: number) => number,
+  y_pixel: (y: number) => number,  
+}
+
+/**
+ * wrapping to underlying context
+ * in axes coordinates
+ */
+export interface ContextWrapper extends AxesWrapper {
+  ctx: DrawingContext,
+  scale: number,
+  x0: number,
+  y0: number,
 
   pixel_x: (x: number) => number,
   pixel_y: (y: number) => number,
-  x_pixel: (x: number) => number,
-  y_pixel: (y: number) => number,
   clear: () => void,
   moveTo: (x: number, y: number) => void,
   lineTo: (x: number, y: number) => void,
@@ -85,13 +84,9 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
 
     // computed properties:
     xMin: x_pixel(0),
-    xCenter: axes.x,
     xMax: x_pixel(width),
     yMin: y_pixel(height),
-    yCenter: axes.y,
     yMax: y_pixel(0),
-    xoff: (width/2 - x0) / scale,
-    yoff: (y0 - height/2) / scale,
 
     // functions:
     pixel_x,

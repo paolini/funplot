@@ -1,6 +1,7 @@
-import { Axes, Point, Lines } from "./axes"
+import { Point, Lines } from "./lines"
+import { AxesWrapper } from "./plot";
 
-export default function plotGraph(plot: Axes, func: (x: number) => number, inverted: boolean, color: string): Lines {
+export default function plotGraph(plot: AxesWrapper, func: (x: number) => number, inverted: boolean, color: string): Lines {
     var pix = inverted
       ? (plot.yMax - plot.yMin)/plot.height
       : (plot.xMax - plot.xMin)/plot.width

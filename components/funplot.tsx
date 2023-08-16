@@ -8,11 +8,12 @@ import { ContextWrapper } from '@/lib/plot'
 import { get, set, getField, update, map, extract, State, } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
-import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, createFigure } from '@/lib/figures'
+import { Figure, FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, createFigure } from '@/lib/figures'
 import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, ParameterPanel } from '@/components/panels'
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
-import { Lines } from '@/lib/axes'
+import { Lines } from '@/lib/lines'
+import { hashLoad, panelToOptions } from '@/lib/hashConverter'
 
 export default function Funplot() {
     const axes = useState<Axes>({x: 0, y: 0, r: 5})
@@ -27,8 +28,12 @@ export default function Funplot() {
     const height = useState<number>(0)
 
     useEffect(() => {
+        /* load data from url */
         console.log("loadFromHash")
-        loadFromHash()
+        const load = hashLoad(window.location.hash)
+        if (!load) return
+        set(axes, load.axes)
+        set(panelsPair, load.figures.map(newPanel))
     }, [])
 
     const parameterList: string[] = get(panelsPair)
@@ -47,13 +52,17 @@ export default function Funplot() {
       <div className="block">
         <div className="flex flex-row">
             <span className="font-bold mx-1">FunPlot</span>
-            <select value="" className="border mx-1" onChange={evt => newPanel(evt.target.value)}>
+            <select 
+                value="" 
+                className="border mx-1" 
+                onChange={evt => update(panelsPair, panels => [...panels, newPanel(evt.target.value)])}
+            >
                 <option value="" disabled={true}>choose plot type</option>
                 <option value="graph">graph y=f(x)</option>
                 <option value="graph_inverted">graph x=f(y)</option>
                 <option value="implicit">level curve f(x,y)=0</option>
-                <option value="ode_equation">ODE equation</option>
-                <option value="ode_system">ODE system</option>
+                <option value="ode">ODE equation</option>
+                <option value="system">ODE system</option>
                 <option value="" disabled={true}>-------</option>
                 <option value="parameter">new parameter</option>
             </select>
@@ -64,7 +73,7 @@ export default function Funplot() {
             </select>
             <span>x={get(cursor).x}</span>, <span>y={get(cursor).y}</span>
         </div>
-        { panelElements() }
+        <PanelElements panelsPair={panelsPair} figures={figures} />
         <Messages messages={messages} />
       </div>
       <div className="flex-1 border-2 border-black h-8 bg-white">  
@@ -77,61 +86,6 @@ export default function Funplot() {
         />
       </div>
     </main>
-
-    function newPanel(value: string) {
-        const fig = newFigureState(((type):Options => {
-            switch (type) {
-                case 'graph': return {
-                    t: 'graph',
-                    i: false,
-                    c: '#f00',
-                    e: 'x*sin(1/x)',
-                }
-                case 'graph_inverted': return {
-                    t: 'graph',
-                    i: true,
-                    c: '#0f0',
-                    e: 'y^2',
-                }
-                case 'implicit': return {
-                    t: 'implicit',
-                    c: '#00f',
-                    e: 'x^4-x^2+y^2',
-                }
-                case 'ode_equation': return {
-                    t: 'ode_equation',
-                    c: "#4A90E2",
-                    sc: "#7ED321",
-                    e: "y^2+x",
-                    ds: false,
-                    gp: true,
-                    l: [],
-                }
-                case 'ode_system': return {
-                    t: 'ode_system',
-                    ex: "y",
-                    ey: "-sin(x)-y",
-                    c: "#4A90E2",
-                    sc: "#7ED321",
-                    ds: false,
-                    da: true,
-                    gp: true,
-                    l: [],
-                }
-                case 'parameter': return {
-                    t: 'parameter',
-                    n: 'c',
-                    e: '1',
-                }
-            }
-            assert(false,`invalid figure type ${type}`)
-        })(value))
-        update(panelsPair, panels => [...panels, {
-            figure: fig,
-            key: Math.random().toString(36).substring(7),
-            active: true,
-        }])
-    }
 
     function performAction(value: string) {
         switch(value) {
@@ -197,85 +151,72 @@ export default function Funplot() {
             }
         })
     }
+}
 
-    function loadFromHash() {
-        let hash = window.location.hash;
-        if (hash.substring(0,3) !== "#q=") return;
-        hash = hash.substring(3);
-        hash = decodeURIComponent(hash);
-        const opt = JSON.parse(hash);
-        console.log('hash:', opt)
-        set(axes, opt.p)
-        const figures: FigureState[] = opt.l.map((params: Options) => newFigureState(params))
-        set(panelsPair, figures.map(figure => ({
-            figure: figure,
-            key: Math.random().toString(36).substring(7),
-            active: true,
-        })))
+function PanelElements({panelsPair, figures}:{
+    panelsPair: State<IPanel[]>,
+    figures: Figure[],
+}) {
+    const panels = get(panelsPair)
+    assert(panels.length === figures.length)
+
+    function move(figure: FigureState, n: number) {
+        if (n === 0) {
+            update(panelsPair, panels => panels.filter(p => p.figure !== figure))
+        } else {
+            const i = panels.findIndex(p => p.figure === figure)
+            const j = i + n
+            if (j < 0 || j >= panels.length) return
+            const newPanels = [...panels]
+            const tmp = newPanels[i]
+            newPanels[i] = newPanels[j]
+            newPanels[j] = tmp
+            set(panelsPair, newPanels)
+        }
     }
 
-    function panelElements() {
-        const [panels, setPanels] = panelsPair
-        assert(panels.length === figures.length)
-
-        function move(figure: FigureState, n: number) {
-            if (n === 0) {
-                setPanels(panels => panels.filter(p => p.figure !== figure))
-            } else {
-                const i = panels.findIndex(p => p.figure === figure)
-                const j = i + n
-                if (j < 0 || j >= panels.length) return
-                const newPanels = [...panels]
-                const tmp = newPanels[i]
-                newPanels[i] = newPanels[j]
-                newPanels[j] = tmp
-                setPanels(newPanels)
-            }
-        }
-
-        return panels.map((panel,i) => {
-            const state: FigureState = panel.figure
-            const active = getField(extract(panelsPair, panel),'active')
-            switch(state.type) {
-                case 'graph':
-                    return <GraphPanel 
-                            key={panel.key} 
-                            state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, state)}
-                            figure={figures[i]}
-                            active={active}
-                            move={move}
-                    />
-                case 'implicit':
-                    return <ImplicitPanel 
-                            key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, state)}
-                            figure={figures[i]}
-                            active={active}
-                            move={move}
-                    />
-                case 'ode':
-                    return <OdeEquationPanel key={panel.key} state={extractFigurePairFromPanels<OdeEquationFigureState>(panelsPair, state)}
-                            figure={figures[i]}
-                            active={active}
-                            move={move}
-                        />
-                case 'system':
-                    return <OdeSystemPanel key={panel.key} state={extractFigurePairFromPanels<OdeSystemFigureState>(panelsPair, state)}
-                            figure={figures[i]}
-                            active={active}
-                            move={move}
-                        />
-                case 'parameter':
-                    return <ParameterPanel key={panel.key} state={extractFigurePairFromPanels<ParameterState>(panelsPair, state)}
+    return panels.map((panel,i) => {
+        const state: FigureState = panel.figure
+        const active = getField(extract(panelsPair, panel),'active')
+        switch(state.type) {
+            case 'graph':
+                return <GraphPanel 
+                        key={panel.key} 
+                        state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, state)}
                         figure={figures[i]}
                         active={active}
                         move={move}
-                        />
-            }
-        })
-    }
+                />
+            case 'implicit':
+                return <ImplicitPanel 
+                        key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, state)}
+                        figure={figures[i]}
+                        active={active}
+                        move={move}
+                />
+            case 'ode':
+                return <OdeEquationPanel key={panel.key} state={extractFigurePairFromPanels<OdeEquationFigureState>(panelsPair, state)}
+                        figure={figures[i]}
+                        active={active}
+                        move={move}
+                    />
+            case 'system':
+                return <OdeSystemPanel key={panel.key} state={extractFigurePairFromPanels<OdeSystemFigureState>(panelsPair, state)}
+                        figure={figures[i]}
+                        active={active}
+                        move={move}
+                    />
+            case 'parameter':
+                return <ParameterPanel key={panel.key} state={extractFigurePairFromPanels<ParameterState>(panelsPair, state)}
+                    figure={figures[i]}
+                    active={active}
+                    move={move}
+                    />
+        }
+    })
 }
 
-type IPanel = {
+export type IPanel = {
     key: string,
     figure: FigureState,
     active: boolean,
@@ -298,136 +239,65 @@ function extractFigurePairFromPanels<FigureType extends FigureState>(panelsPair:
     return [figure, setFigure]
 }
 
-type GraphOptions = {
-    t: 'graph',
-    i: boolean, // inverted
-    e: string, // expr
-    c: string, // color
-}
-
-type ImplicitOptions = {
-    t: 'implicit',
-    e: string, // expr
-    c: string, // color
-}
-
-type OdeEquationOptions = {
-    t: 'ode_equation',
-    e: string, // expr
-    c: string, // color
-    sc: string, // slope_color
-    ds: boolean, // draw_slope
-    gp: boolean, // grid_points
-    l: [number,number][], // points
-}
-
-type OdeSystemOptions = {
-    t: 'ode_system',
-    ex: string, // expr
-    ey: string, // expr
-    da: boolean, // draw_arrows
-    c: string, // color
-    sc: string, // slope_color
-    ds: boolean, // draw_slope
-    gp: boolean, // grid_points
-    l: [number,number][], // points
-}
-
-type ParameterOptions = {
-    t: 'parameter',
-    e: string, // expr
-    n: string, // name
-}
-
-type Options 
-    = GraphOptions 
-    | ImplicitOptions 
-    | OdeEquationOptions 
-    | OdeSystemOptions 
-    | ParameterOptions
-
-function newFigureState(opts: Options): FigureState { 
-    switch(opts.t) {
-        case 'graph': return {
-            type: 'graph',
-            inverted: opts.i,
-            color: opts.c,
-            expr: opts.e,   
-        }
-        case 'implicit': return {
-            type: 'implicit',
-            color: opts.c,
-            expr: opts.e,
-        }
-        case 'ode_equation': return {
-            type: 'ode',
-            color: opts.c,
-            slopeColor: opts.sc,
-            expr: opts.e,
-            drawSlope: false,
-            gridPoints: true,
-            gridCount: 20,
-            points: [],
-        }
-        case 'ode_system': return {
-            type: 'system',
-            exprX: opts.ex,
-            exprY: opts.ey,
-            color: opts.c,
-            slopeColor: opts.sc,
-            drawSlope: opts.ds,
-            drawArrows: opts.da,
-            gridPoints: opts.gp,
-            gridCount: 20,
-            points: opts.l.map(([x,y]) => ({x,y})),
-        }
-        case 'parameter': return {
-            type: 'parameter',
-            expr: opts.e,
-            name: opts.n,
-        }
+const DEFAULT_FIGURE: {
+    [key: string]: FigureState,
+        } = {
+    'graph': {
+        type: 'graph',
+        inverted: false,
+        color: '#f00',
+        expr: 'x*sin(1/x)',
+    },
+    'graph_inverted': {
+        type: 'graph',
+        inverted: true,
+        color: '#0f0',
+        expr: 'y^2',
+    },
+    'implicit': {
+        type: 'implicit',
+        color: '#00f',
+        expr: 'x^4-x^2+y^2',
+    },
+    'ode': {
+        type: 'ode',
+        color: "#4A90E2",
+        slopeColor: "#7ED321",
+        expr: "y^2+x",
+        drawSlope: false,
+        gridPoints: true,
+        gridCount: 20,
+        points: [],
+    },
+    'system': {
+        type: 'system',
+        exprX: "y",
+        exprY: "-sin(x)-y",
+        color: "#4A90E2",
+        slopeColor: "#7ED321",
+        drawSlope: false,
+        drawArrows: true,
+        gridPoints: true,
+        gridCount: 20,
+        points: [],
+    },
+    'parameter': {
+        type: 'parameter',
+        name: 'c',
+        expr: '1',
+        min: 0.0,
+        max: 1.0,
     }
 }
 
-function panelToOptions(panel: IPanel): Options {
-    const state = panel.figure
-    switch(state.type) {
-        case 'graph': return {
-            t: 'graph',
-            i: state.inverted,
-            c: state.color,
-            e: state.expr,
-        }
-        case 'implicit': return {
-            t: 'implicit',
-            c: state.color,
-            e: state.expr,
-        }
-        case 'ode': return {
-            t: 'ode_equation',
-            c: state.color,
-            sc: state.slopeColor,
-            e: state.expr,
-            ds: state.drawSlope,
-            gp: state.gridPoints,
-            l: state.points.map(p => [p.x,p.y]),
-        }
-        case 'system': return {
-            t: 'ode_system',
-            ex: state.exprX,
-            ey: state.exprY,
-            c: state.color,
-            sc: state.slopeColor,
-            ds: state.drawSlope,
-            da: state.drawArrows,
-            gp: state.gridPoints,
-            l: state.points.map(p => [p.x,p.y]),
-        }
-        case 'parameter': return {
-            t: 'parameter',
-            e: state.expr,
-            n: state.name,
-        }
+function newPanel(value: string|FigureState) {
+    const figure: FigureState = typeof(value)==='string' 
+        ? DEFAULT_FIGURE[value] 
+        : value
+    return {
+        figure,
+        key: Math.random().toString(36).substring(7),
+        active: true,
     }
 }
 

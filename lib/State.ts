@@ -32,6 +32,11 @@ export function onChange([value, setValue]: State<string>): ChangeEventHandler<H
     return (evt: ChangeEvent<HTMLInputElement>) => setValue(_ => evt.target.value)
 }
 
+// onChange event handler of input for a number state [value, setValue]
+export function onChangeNumber([value, setValue]: State<number>): ChangeEventHandler<HTMLInputElement> {
+    return (evt: ChangeEvent<HTMLInputElement>) => setValue(_ => (x => isNaN(x)?0:x)(parseFloat(evt.target.value)))
+}
+
 export function onChangeBoolean([value, setValue]: State<boolean>): ChangeEventHandler<HTMLInputElement> {
     return (evt: ChangeEvent<HTMLInputElement>) => setValue(_ => evt.target.checked)
 }
