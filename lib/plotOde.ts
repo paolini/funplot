@@ -1,14 +1,14 @@
-import { Lines, Line, Point, Segment } from './lines'
+import { Line, Point, Segment } from './lines'
 import { AxesWrapper } from './plot';
 export default odePlot
 
 export type Fun2 = (x: number, y: number) => number
 
 export function slopeGraph(plot: AxesWrapper, fx: Fun2, fy: Fun2, draw_arrows: boolean, color: string): Line {
-    var xmin = plot.x_pixel(0);
-    var ymin = plot.y_pixel(plot.height);
-    var xmax = plot.x_pixel(plot.width);
-    var ymax = plot.y_pixel(0);
+    var xmin = plot.xMin
+    var ymin = plot.yMin
+    var xmax = plot.xMax
+    var ymax = plot.yMax
     var gridx = (xmax - xmin)/40;
     var gridy = gridx;
     var h = (draw_arrows?0.5:0.3) * gridx;
@@ -42,10 +42,10 @@ export type OdePlotOptions = {
   }
 
 export function odePlot(plot: AxesWrapper, fx: Fun2, fy: Fun2, x0: number, y0: number, options: OdePlotOptions): Line {
-    var xmin = plot.x_pixel(0);
-    var ymin = plot.y_pixel(plot.height);
-    var xmax = plot.x_pixel(plot.width);
-    var ymax = plot.y_pixel(0);
+    var xmin = plot.xMin
+    var ymin = plot.yMin
+    var xmax = plot.xMax
+    var ymax = plot.yMax
     function sqr(x:number) {return x*x}
     const dt = plot.radius / Math.sqrt(sqr(plot.width) + sqr(plot.height))
     //const dt = plot.radius/plot.width;

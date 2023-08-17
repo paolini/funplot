@@ -34,9 +34,6 @@ export interface AxesWrapper {
   height: number,
   width: number,
   radius: number,
-
-  x_pixel: (x: number) => number,
-  y_pixel: (y: number) => number,  
 }
 
 /**
@@ -49,6 +46,8 @@ export interface ContextWrapper extends AxesWrapper {
   x0: number,
   y0: number,
 
+  x_pixel: (x: number) => number,
+  y_pixel: (y: number) => number,  
   pixel_x: (x: number) => number,
   pixel_y: (y: number) => number,
   clear: () => void,

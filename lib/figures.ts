@@ -1,7 +1,7 @@
 import { compile, parse } from 'mathjs'
 import assert from 'assert'
 
-import plotGraph from '@/lib/plotGraph'
+import {plotGraph,plotInvertedGraph} from '@/lib/plotGraph'
 import levelPlot from './plotLevels'
 import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/plotOde'
 import Coords from '@/lib/Coords'
@@ -141,7 +141,8 @@ function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
         if (!compiledExpr) return []
         try {
             const fun = getFun(compiledExpr, parameters)
-            return plotGraph(axes, fun, state.inverted, state.color)
+            if (state.inverted) return plotInvertedGraph(axes, fun, state.color)
+            else return plotGraph(axes, fun, state.color)
         } catch(e) {
             console.error(e)
             return []
