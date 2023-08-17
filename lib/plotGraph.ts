@@ -24,7 +24,7 @@ export function plotInvertedGraph(plot: AxesWrapper, f: (y:number) => number, co
   })
 }
 
-export function plotGraph(plot: AxesWrapper, f: (x:number)=>number, color: string): Lines {
+export function newPlotGraph(plot: AxesWrapper, f: (x:number)=>number, color: string): Lines {
   let lines: Lines = []
   let points: Point[] = []
 
@@ -45,7 +45,7 @@ export function plotGraph(plot: AxesWrapper, f: (x:number)=>number, color: strin
   const xMax = plot.xMax
   const yMin = plot.yMin
   const yMax = plot.yMax
-  const dx = (plot.xMax - plot.xMin)/plot.width
+  const dx = 0.5 //(plot.xMax - plot.xMin)/plot.width
   const dy = dx // suppose isometric
 
   function bisectDomain(x0: number, y0: number, x1: number, eps: number): [number,number] {
@@ -159,10 +159,9 @@ export function plotGraph(plot: AxesWrapper, f: (x:number)=>number, color: strin
         if (y>yMax) pushPoint(bisectValue(xx,yy,x,y,yMax, dy))
         else pushPoint(bisectValue(xx,yy,x,y,yMin, dy))
         pushLine()
-      } else {
-        xx = x
-        yy = y
-      }
+      } 
+      xx = x
+      yy = y
       continue
     }
 
@@ -197,18 +196,16 @@ export function plotGraph(plot: AxesWrapper, f: (x:number)=>number, color: strin
   return lines
 }
 
-export function OldplotGraph(plot: AxesWrapper, func: (x: number) => number, inverted: boolean, color: string): Lines {
-    var pix = inverted
-      ? (plot.yMax - plot.yMin)/plot.height
-      : (plot.xMax - plot.xMin)/plot.width
-    var x = inverted?plot.yMin:plot.xMin;
+export function plotGraph(plot: AxesWrapper, func: (x: number) => number, color: string): Lines {
+    var pix = (plot.xMax - plot.xMin)/plot.width
+    var x = plot.xMin;
     var y = func(x);
     var max_dx = pix;
     var min_dx = pix/10;
     var dx = max_dx;
-    var xend = inverted?plot.yMax:plot.xMax;
-    var ymin = inverted?plot.xMin:plot.yMin;
-    var ymax = inverted?plot.xMax:plot.yMax;
+    var xend = plot.xMax;
+    var ymin = plot.yMin;
+    var ymax = plot.yMax;
 
     let lines: Lines = []
     let points: Point[] = []
@@ -224,11 +221,55 @@ export function OldplotGraph(plot: AxesWrapper, func: (x: number) => number, inv
       points = []
     }
 
+    function bisectJump(a:number, y:number, b:number, yy:number) {
+      const ITER=10
+      let ya = y
+      let ymid = 0.5*(y+yy)
+      let i
+      for (i=0;i<ITER;++i) {
+        var c = 0.5*(a+b);
+        var y1 = func(c);
+        if (isNaN(y1)) return true
+        if (Math.abs(y1-ymid) < pix) return false
+        if ((ya <= ymid && y1 >= ymid) || (ya>=ymid && y1 <=ymid)) {
+          b = c;
+        } else {
+          a = c;
+          ya = y1;
+        }
+      }
+      return true
+    }
+
+    function bisectDomain(x: number, y: number, xx: number, eps: number): [number,number] {
+      // find last domain point from x (in domain) to xx (outside)
+      assert(!isNaN(y))
+      for(let i=0;i<10;++i) {
+        const xxx = 0.5*(x+xx)
+        const yyy = func(xxx)
+        if (isNaN(yyy)) {
+          xx=xxx          
+        } else {
+          if (Math.abs(yyy-y)<eps) return [xxx,yyy]
+          x=xxx
+          y=yyy
+        }
+      }
+      return [x,y]
+    }
+
     while(x<xend) {
       var xx = x+dx;
       var yy = func(xx);
-      if (isNaN(y) || isNaN(yy)) {
-        push()
+      if (isNaN(yy)) {
+        if (!isNaN(y)) {
+          points.push(bisectDomain(x,y,xx,pix))
+          push()
+        } else push()
+      } else if (isNaN(y)) {
+          push()
+          ;[xx,yy] = bisectDomain(xx,yy,x,pix)
+          points.push([xx,yy])
       } else if (yy>ymax && y > ymax) {
         push()
       } else if (yy<ymin && y < ymin) {
@@ -244,35 +285,9 @@ export function OldplotGraph(plot: AxesWrapper, func: (x: number) => number, inv
         } else {
           if (dx < max_dx) dx = 2.0 * dx;
         }
-        var i = 0;
-        const ITER=10;
-        if (Math.abs(dy)>pix) {
-          // use bisection to decide if there is jump discontinuity
-          var a = x;
-          var b = xx;
-          var ya = y;
-          var yb = yy;
-          var ymid = 0.5*(y+yy);
-          for (i=0;i<ITER;++i) {
-            var c = 0.5*(a+b);
-            var y1 = func(c);
-            if (isNaN(y1)) {
-              i = ITER;
-              break;
-            }
-            if (Math.abs(y1-ymid) < pix) {
-              break;
-            }
-            if ((ya <= ymid && y1 >= ymid) || (ya>=ymid && y1 <=ymid)) {
-              b = c;
-              yb = y1;
-            } else {
-              a = c;
-              ya = y1;
-            }
-          }
-        }
-        if (i>=ITER) {
+
+        // use bisection to decide if there is jump discontinuity
+        if (Math.abs(dy)>pix && bisectJump(x,y,xx,yy)) {
           // jump detected
           push()
         } else {
@@ -286,9 +301,7 @@ export function OldplotGraph(plot: AxesWrapper, func: (x: number) => number, inv
               yyy = ymin;
               xxx = x + (yyy-y)/(yy-y)*(xx-x);
             }
-            points.push(inverted
-              ? [yyy,xxx]
-              : [xxx,yyy])
+            points.push([xxx,yyy])
           }
           if (1) {
             var xxx = x;
@@ -302,9 +315,7 @@ export function OldplotGraph(plot: AxesWrapper, func: (x: number) => number, inv
               xxx = xx + (yyy-yy)/(y-yy)*(x - xx);
               push()
             }
-            points.push(inverted
-              ?[yyy, xxx]
-              :[xxx, yyy])
+            points.push([xxx, yyy])
           }
         }
       }
