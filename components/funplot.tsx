@@ -13,6 +13,7 @@ import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, ParameterP
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
 import { Lines } from '@/lib/axes'
+import { version } from '../package.json'
 
 export default function Funplot() {
     const axes = useState<Axes>({x: 0, y: 0, r: 5})
@@ -46,7 +47,7 @@ export default function Funplot() {
     return <main className="flex flex-col flex-1 bg-blue-200">
       <div className="block">
         <div className="flex flex-row">
-            <span className="font-bold mx-1">FunPlot</span>
+            <span className="font-bold mx-1">FunPlot {version}</span>
             <select value="" className="border mx-1" onChange={evt => newPanel(evt.target.value)}>
                 <option value="" disabled={true}>choose plot type</option>
                 <option value="graph">graph y=f(x)</option>
@@ -364,10 +365,10 @@ function newFigureState(opts: Options): FigureState {
             color: opts.c,
             slopeColor: opts.sc,
             expr: opts.e,
-            drawSlope: false,
-            gridPoints: true,
+            drawSlope: opts.ds,
+            gridPoints: opts.gp,
             gridCount: 20,
-            points: [],
+            points: opts.l.map(([x,y]) => ({x,y})),
         }
         case 'ode_system': return {
             type: 'system',
