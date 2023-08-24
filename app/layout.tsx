@@ -1,5 +1,6 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
+import { BANNER } from '@/app/info'
 
 const env = process.env.NODE_ENV
 const inter = Inter({ subsets: ['latin'] })
@@ -22,17 +23,7 @@ export default function RootLayout({
 
 
 
-            https://github.com/paolini/funplot/
-             _____  __ __  ____   ____  _       ___   ______                          
-            |     ||  |  ||    \\ |    \\| |     /   \\ |      |                         
-            |   __||  |  ||  _  ||  o  ) |    |     ||      |                         
-            |  |_  |  |  ||  |  ||   _/| |___ |  O  ||_|  |_|                         
-            |   _] |  :  ||  |  ||  |  |     ||     |  |  |                           
-            |  |   |     ||  |  ||  |  |     ||     |  |  |                           
-            |__|    \\__,_||__|__||__|  |_____| \\___/   |__|                           
-                                                                                      
-            https://github.com/paolini/funplot/
-
+${BANNER}
 
 
 

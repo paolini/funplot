@@ -13,7 +13,7 @@ import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, ParameterP
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
 import { Lines } from '@/lib/axes'
-import { version } from '../package.json'
+import { BANNER, VERSION } from '@/app/info'
 
 export default function Funplot() {
     const axes = useState<Axes>({x: 0, y: 0, r: 5})
@@ -28,7 +28,8 @@ export default function Funplot() {
     const height = useState<number>(0)
 
     useEffect(() => {
-        console.log("loadFromHash")
+        console.log(BANNER)
+        // console.log("loadFromHash")
         loadFromHash()
     }, [])
 
@@ -40,14 +41,14 @@ export default function Funplot() {
     const figures = get(panelsPair).map(p => createFigure(p.figure, parameterList))
 
     useEffect(() => {
-        console.log("changed!")
+        //console.log("changed!")
         update(updateCount, count => count+1)
     }, [get(axes),get(panelsPair)])
 
     return <main className="flex flex-col flex-1 bg-blue-200">
       <div className="block">
         <div className="flex flex-row">
-            <span className="font-bold mx-1">FunPlot {version}</span>
+            <span className="font-bold mx-1">FunPlot {VERSION}</span>
             <select value="" className="border mx-1" onChange={evt => newPanel(evt.target.value)}>
                 <option value="" disabled={true}>choose plot type</option>
                 <option value="graph">graph y=f(x)</option>
@@ -163,12 +164,12 @@ export default function Funplot() {
     }           
 
     async function plot(ctx: ContextWrapper) {
-        console.log('plot!')
+        // console.log('plot!')
         draw(ctx, lines)
         if (get(updateCount)!==get(drawCount)) {
             if (pending.timeout) clearTimeout(pending.timeout)
             pending.timeout = setTimeout(async () => {
-                console.log('recompute')
+                // console.log('recompute')
                 let mylines: Lines = []
                 const parameters = Object.fromEntries(parameterList.map(p => [p,0]))
 
