@@ -189,12 +189,10 @@ export default function levelPlot(plot: AxesWrapper, f: Fun, color: string): Lin
     return 4;
   }
 
-  // step 1. Construct equal squares of side L
-
-  var xmin = plot.x_pixel(0);
-  var ymin = plot.y_pixel(plot.height);
-  var xmax = plot.x_pixel(plot.width);
-  var ymax = plot.y_pixel(0);
+  var xmin = plot.xMin
+  var ymin = plot.yMin
+  var xmax = plot.xMax
+  var ymax = plot.yMax
 
   var pixel_eps = 2 * plot.radius / Math.sqrt(plot.width*plot.width + plot.height*plot.height);
   var L = 80 * pixel_eps;

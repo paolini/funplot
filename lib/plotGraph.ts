@@ -1,4 +1,3 @@
-import { ZCOOL_QingKe_HuangYou } from "next/font/google"
 import { Point, Lines } from "./lines"
 import { AxesWrapper } from "./plot"
 import assert from "assert"
