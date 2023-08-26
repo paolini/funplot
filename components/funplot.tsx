@@ -14,6 +14,7 @@ import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
 import { Lines } from '@/lib/lines'
 import { hashLoad, panelToOptions } from '@/lib/hashConverter'
+import { version } from '../package.json'
 
 export default function Funplot() {
     const axes = useState<Axes>({x: 0, y: 0, r: 5})
@@ -51,7 +52,7 @@ export default function Funplot() {
     return <main className="flex flex-col flex-1 bg-blue-200">
       <div className="block">
         <div className="flex flex-row">
-            <span className="font-bold mx-1">FunPlot</span>
+            <span className="font-bold mx-1">FunPlot {version}</span>
             <select 
                 value="" 
                 className="border mx-1" 
