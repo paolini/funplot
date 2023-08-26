@@ -33,7 +33,7 @@ export default function Canvas({axes, resize, plot, click, move}
         canvas.width = canvas.clientWidth
         canvas.height = canvas.clientHeight
         if (resize) {
-            console.log("resize")
+            // console.log("resize")
             setTimeout(() => resize(canvas.width, canvas.height))
         }
     }
