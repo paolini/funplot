@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import assert from 'assert'
 import { jsPDF } from 'jspdf'
+import { FaGithub, FaShareAlt, FaDownload } from 'react-icons/fa'
 
 import { context } from '@/lib/plot'
 import { ContextWrapper } from '@/lib/plot'
@@ -53,10 +54,13 @@ export default function Funplot() {
     return <main className="flex flex-col flex-1 bg-blue-200">
       <div className="block">
         <div className="flex flex-row">
-            <span className="font-bold mx-1">FunPlot {VERSION}</span>
+            <a className="flex font-bold mx-1" href="https://github.com/paolini/funplot">
+                <FaGithub className="block me-1 mt-1"/>
+                <span className="block">FunPlot {VERSION}</span>
+            </a>
             <select 
                 value="" 
-                className="border mx-1" 
+                className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800" 
                 onChange={evt => update(panelsPair, panels => [...panels, newPanel(evt.target.value)])}
             >
                 <option value="" disabled={true}>choose plot type</option>
@@ -68,12 +72,20 @@ export default function Funplot() {
                 <option value="" disabled={true}>-------</option>
                 <option value="parameter">new parameter</option>
             </select>
-            <select value="" className="border mx-1" onChange={evt => performAction(evt.target.value)}>
-                <option value="">choose action</option>
-                <option value="pdf">export PDF</option>
-                <option value="share">share link</option>
-            </select>
-            <span>x={get(cursor).x}</span>, <span>y={get(cursor).y}</span>
+            <button 
+                className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 rounded inline-flex items-center"
+                onClick={share}>
+                <FaShareAlt className="mt-1 mx-1 btn"/>
+                <span>share</span>
+            </button>
+            <button 
+                className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 rounded inline-flex items-center"
+                onClick={downloadPDF}
+                >
+                <FaDownload className="mt-1 mx-1 button"/>
+                <span>pdf</span>
+            </button>
+            <span>x={get(cursor).x}</span><span className="ms-2">y={get(cursor).y}</span>
         </div>
         <PanelElements panelsPair={panelsPair} figures={figures} />
         <Messages messages={messages} />
@@ -89,33 +101,30 @@ export default function Funplot() {
       </div>
     </main>
 
-    function performAction(value: string) {
-        switch(value) {
-            case 'pdf':
-                exportPdf(get(axes), get(width), get(height), lines)
-                break
-            case 'share':
-                const panels = get(panelsPair)
-                const opt = {
-                    p: get(axes),
-                    l: panels.map(panelToOptions),
-                }
-                const hash = encodeURIComponent(JSON.stringify(opt))
-                window.location.hash = `#q=${hash}`
-                // copy to clipboard
-                const el = document.createElement('textarea')
-                el.value = window.location.href
-                document.body.appendChild(el)
-                el.select()
-                document.execCommand('copy')
-                document.body.removeChild(el)
-                update<IMessage[]>(messages, messages => [...messages, {
-                    type: 'info',
-                    message: 'link copied to clipboard',
-                    }])
-                break
+    function share() {
+        const panels = get(panelsPair)
+        const opt = {
+            p: get(axes),
+            l: panels.map(panelToOptions),
         }
-    }           
+        const hash = encodeURIComponent(JSON.stringify(opt))
+        window.location.hash = `#q=${hash}`
+        // copy to clipboard
+        const el = document.createElement('textarea')
+        el.value = window.location.href
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+        update<IMessage[]>(messages, messages => [...messages, {
+            type: 'info',
+            message: 'link copied to clipboard',
+            }])
+    }
+
+    function downloadPDF() {
+        exportPdf(get(axes), get(width), get(height), lines)
+    }
 
     async function plot(ctx: ContextWrapper) {
         // console.log('plot!')
