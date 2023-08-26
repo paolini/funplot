@@ -48,7 +48,7 @@ export function ImplicitPanel({state, figure, active, move}:
                 tex={figure.tex}
                 move={n => move(figure.state, n)}
             >
-        <span>y(x)=</span>
+        <span>f(x,y)=</span>
         <Input expr={expr} />
         <Errors errors={figure.errors}/>
     </PanelBand>
