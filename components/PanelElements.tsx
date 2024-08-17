@@ -3,11 +3,13 @@ import assert from 'assert'
 import { Figure, FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, createFigure } from '@/lib/figures'
 import { get, set, getField, update, map, extract, State, } from '@/lib/State'
 import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, ParameterPanel } from '@/components/panels'
-import { IPanel, extractFigurePairFromPanels } from '@/lib/funplot'
+import { IPanel, extractFigurePairFromPanels, newPanel } from '@/lib/funplot'
+import Coords from '@/lib/Coords'
 
-export default function PanelElements({panelsPair, figures}:{
+export default function PanelElements({panelsPair, figures, cursor}:{
     panelsPair: State<IPanel[]>,
     figures: Figure[],
+    cursor: State<Coords>,
 }) {
     const panels = get(panelsPair)
     assert(panels.length === figures.length)
@@ -27,7 +29,9 @@ export default function PanelElements({panelsPair, figures}:{
         }
     }
 
-    return panels.map((panel,i) => {
+    return <>
+        {
+        panels.map((panel,i) => {
         const state: FigureState = panel.figure
         const active = getField(extract(panelsPair, panel),'active')
         switch(state.type) {
@@ -66,4 +70,23 @@ export default function PanelElements({panelsPair, figures}:{
                     />
         }
     })
+    }
+        <div className="flex flex-row">
+            <select 
+                value="" 
+                className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800" 
+                onChange={evt => update(panelsPair, panels => [...panels, newPanel(evt.target.value)])}
+            >
+                <option value="" disabled={true}>choose plot type</option>
+                <option value="graph">graph y=f(x)</option>
+                <option value="graph_inverted">graph x=f(y)</option>
+                <option value="implicit">level curve f(x,y)=0</option>
+                <option value="ode">ODE equation</option>
+                <option value="system">ODE system</option>
+                <option value="" disabled={true}>-------</option>
+                <option value="parameter">new parameter</option>
+            </select>
+            <span>x={get(cursor).x}</span><span className="ms-2">y={get(cursor).y}</span>
+        </div>
+    </>
 }

@@ -8,9 +8,11 @@ import Coords from '@/lib/Coords'
 
 type PlotFunction = (ctx: ContextWrapper) => Promise<void>
 
-export default function Canvas({axes, resize, plot, click, move}
+export default function Canvas({axes, width=640, height=480, plot, click, move}
     :{
         axes: State<Axes>,
+        width?: number,
+        height?: number,
         plot: PlotFunction,
         resize?: (width: number, height: number)=> void,
         click?: (coords: Coords) => void,
@@ -21,22 +23,10 @@ export default function Canvas({axes, resize, plot, click, move}
     const [dragging, setDragging] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
-    const [count, setCount] = useState<number>(0) // used to force a re-render
 
     useEffect(() => {
         setCanvas(canvasRef.current)
-        window.addEventListener("resize",onWindowResize)
-        return (() => window.removeEventListener("resize",onWindowResize))
     }, [])
-
-    if (canvas) {
-        canvas.width = canvas.clientWidth
-        canvas.height = canvas.clientHeight
-        if (resize) {
-            // console.log("resize")
-            setTimeout(() => resize(canvas.width, canvas.height))
-        }
-    }
 
     const ctx = canvas ? canvasContext(get(axes), canvas) : null
 
@@ -44,9 +34,19 @@ export default function Canvas({axes, resize, plot, click, move}
         plot(ctx)
     }
 
-    function onWindowResize() {
-        setCount(count => count+1)
-    }
+    //className="h-full w-full" 
+    return <canvas
+            className="border-2 border-black bg-white"
+            width={width}
+            height={height}
+            ref={canvasRef} 
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onScroll={onScroll}
+            onWheel={onWheel}
+            onBlur={() => setDragging(false)}
+        />
 
     function onMouseDown(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
@@ -55,7 +55,7 @@ export default function Canvas({axes, resize, plot, click, move}
         setMoved(false)
         setDragging(true)
     }
-  
+    
     function onMouseMove(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
         const pos = ctx.mouseCoords(evt)
@@ -65,7 +65,7 @@ export default function Canvas({axes, resize, plot, click, move}
         if (move) move(pos)
         setMoved(true)
     }
-  
+    
     function onMouseUp(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
         const pos = ctx.mouseCoords(evt);
@@ -75,7 +75,7 @@ export default function Canvas({axes, resize, plot, click, move}
         setMoved(false)
         setDragging(false)
     }
-  
+    
     function zoom(delta: number, x:number, y:number) {
         if (!ctx) return
         var factor = Math.exp(delta/40)
@@ -95,15 +95,5 @@ export default function Canvas({axes, resize, plot, click, move}
         zoom(delta, pos.x, pos.y)
     }
 
-    return <canvas 
-            className="h-full w-full" 
-            ref={canvasRef} 
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
-            onScroll={onScroll}
-            onWheel={onWheel}
-            onBlur={() => setDragging(false)}
-        />
 }
 

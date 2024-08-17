@@ -52,22 +52,23 @@ export default function Funplot() {
 
     return <main className="flex flex-col flex-1 bg-blue-200">
         <Header 
-            panelsPair={panelsPair}
             share={share}
             downloadPDF={downloadPDF}
+            />
+        <PanelElements 
+            panelsPair={panelsPair} 
+            figures={figures} 
             cursor={cursor}
             />
-        <PanelElements panelsPair={panelsPair} figures={figures} />
         <Messages messages={messages} />
-      <div className="flex-1 border-2 border-black h-8 bg-white">  
-        <Canvas 
-            axes={axes}
-            plot={plot} 
-            click={click}
-            move={pos => set(cursor,pos)}
-            resize={(w,h) => {set(width, w);set(height, h)}}
-        />
-    </div>
+        <div className="flex-1 h-8">  
+            <Canvas 
+                axes={axes}
+                plot={plot} 
+                click={click}
+                move={pos => set(cursor,pos)}
+            />
+        </div>
     </main>
 
     function share() {
