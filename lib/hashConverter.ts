@@ -1,6 +1,6 @@
 import { FigureState } from './figures'
 import { Axes } from './plot'
-import { IPanel } from '@/components/funplot'
+import { IPanel } from '@/components/Funplot'
 
 `
 TESTING:
