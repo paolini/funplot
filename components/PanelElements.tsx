@@ -2,7 +2,12 @@ import assert from 'assert'
 
 import { Figure, FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, RecurrenceFigureState, ParameterState } from '@/lib/figures'
 import { get, set, getField, update, map, extract, State, } from '@/lib/State'
-import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, RecurrencePanel, ParameterPanel } from '@/components/panels'
+import GraphPanel from './GraphPanel'
+import ImplicitPanel from './ImplicitPanel'
+import OdeEquationPanel from './OdeEquationPanel'
+import OdeSystemPanel from './OdeSystemPanel'
+import RecurrencePanel from './RecurrencePanel'
+import { ParameterPanel } from './ParameterPanel'
 import { IPanel, extractFigurePairFromPanels, newPanel } from '@/lib/funplot'
 import Coords from '@/lib/Coords'
 
