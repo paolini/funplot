@@ -1,6 +1,5 @@
 import { Point, Lines } from "./lines"
 import { AxesWrapper } from "./plot"
-import assert from "assert"
 
 export function plotRecurrence(plot: AxesWrapper, func: (x: number) => number, start: number, color: string): Lines {
     var x = start

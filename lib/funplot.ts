@@ -1,4 +1,3 @@
-import assert from 'assert'
 import { jsPDF } from 'jspdf'
 
 import { context } from '@/lib/plot'
@@ -73,6 +72,13 @@ const DEFAULT_FIGURE: {
         gridCount: 20,
         points: [],
     },
+    'recurrence': {
+        type: 'recurrence',
+        expr: 'cos(x)',
+        graphColor: "#0000FF",
+        webColor: "#00FFF0",
+        start: NaN,
+    },
     'parameter': {
         type: 'parameter',
         name: 'c',
@@ -80,13 +86,6 @@ const DEFAULT_FIGURE: {
         min: 0.0,
         max: 1.0,
     },
-    'recurrence': {
-        type: 'recurrence',
-        expr: 'cos(x)',
-        graphColor: "#FF0000",
-        webColor: "#00FF00",
-        start: NaN,
-    }
 }
 
 export function newPanel(value: string|FigureState) {

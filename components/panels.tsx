@@ -155,7 +155,7 @@ export function RecurrencePanel({state, figure, active, move}:
                 move={n => move(figure.state, n)}
                 >
         <div className="flex flex-row px-2 items-center">
-            <span>f(x)=</span>
+            <ColorBlock className="flex mr-1" color={graphColor} />            <span>f(x)=</span>
             <Input expr={expr} />
             {Number.isNaN(get(start)) && <span>clicca sul grafico per selezionare il punto iniziale</span>}
             <Errors errors={figure.errors} />

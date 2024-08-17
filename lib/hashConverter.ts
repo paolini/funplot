@@ -1,6 +1,6 @@
 import { FigureState } from './figures'
 import { Axes } from './plot'
-import { IPanel } from '@/components/Funplot'
+import { IPanel } from '@/lib/funplot'
 
 `
 TESTING:
@@ -78,6 +78,13 @@ function newFigureState(opts: any): FigureState|void {
             gridCount: 20,
             points: opts.l.map(loadCoord),
         }
+        case 'recurrence': return {
+            type: 'recurrence',
+            expr: opts.e,
+            webColor: opts.webColor,
+            graphColor: opts.graphColor,
+            start: opts.s
+        }
         case 'parameter': return {
             type: 'parameter',
             expr: opts.e,
@@ -121,6 +128,13 @@ export function panelToOptions(panel: IPanel): Options {
             da: state.drawArrows,
             gp: state.gridPoints,
             l: state.points.map(p => [p.x,p.y]),
+        }
+        case 'recurrence': return {
+            t: 'recurrence',
+            e: state.expr,
+            s: state.start,
+            wc: state.webColor,
+            gc: state.graphColor
         }
         case 'parameter': return {
             t: 'parameter',
@@ -167,6 +181,14 @@ type OdeSystemOptions = {
     l: [number,number][], // points
 }
 
+type RecurrenceOptions = {
+    t: 'recurrence',
+    e: string, // expr
+    wc: string, // webColor
+    gc: string, // graphColor
+    s: number // start
+}
+
 type ParameterOptions = {
     t: 'parameter',
     e: string, // expr
@@ -179,6 +201,7 @@ type Options
     = GraphOptions 
     | ImplicitOptions 
     | OdeEquationOptions 
-    | OdeSystemOptions 
+    | OdeSystemOptions
+    | RecurrenceOptions 
     | ParameterOptions
 

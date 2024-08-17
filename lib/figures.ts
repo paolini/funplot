@@ -374,8 +374,9 @@ function recurrenceFigure(state: RecurrenceFigureState, parameterList: string[])
         try {
             const fun = getFunX(compiledExpr, parameters)
             return [
-                ...plotGraph(axes, fun, state.graphColor),
                 ...plotRecurrence(axes, fun, state.start, state.webColor),
+                ...plotGraph(axes, fun, state.graphColor),
+                ...plotGraph(axes, x=>x, "#AAAAAA"),
             ]
         } catch(e) {
             console.error(e)
