@@ -1,8 +1,8 @@
 import assert from 'assert'
 
-import { Figure, FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, createFigure } from '@/lib/figures'
+import { Figure, FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, RecurrenceFigureState, ParameterState } from '@/lib/figures'
 import { get, set, getField, update, map, extract, State, } from '@/lib/State'
-import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, ParameterPanel } from '@/components/panels'
+import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, RecurrencePanel, ParameterPanel } from '@/components/panels'
 import { IPanel, extractFigurePairFromPanels, newPanel } from '@/lib/funplot'
 import Coords from '@/lib/Coords'
 
@@ -62,6 +62,14 @@ export default function PanelElements({panelsPair, figures, cursor}:{
                         active={active}
                         move={move}
                     />
+            case 'recurrence':
+                return <RecurrencePanel 
+                    key={panel.key} 
+                    state={extractFigurePairFromPanels<RecurrenceFigureState>(panelsPair, state)}
+                    figure={figures[i]}
+                    active={active}
+                    move={move}
+                />
             case 'parameter':
                 return <ParameterPanel key={panel.key} state={extractFigurePairFromPanels<ParameterState>(panelsPair, state)}
                     figure={figures[i]}
@@ -83,6 +91,7 @@ export default function PanelElements({panelsPair, figures, cursor}:{
                 <option value="implicit">level curve f(x,y)=0</option>
                 <option value="ode">ODE equation</option>
                 <option value="system">ODE system</option>
+                <option value="recurrence">cobweb diagram</option>
                 <option value="" disabled={true}>-------</option>
                 <option value="parameter">new parameter</option>
             </select>

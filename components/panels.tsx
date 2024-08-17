@@ -5,7 +5,7 @@ import TeX from '@matejmazur/react-katex'
 import { FaTrash, FaArrowUp, FaArrowDown } from 'react-icons/fa'
 
 import { get, set, getField, update, onChange, onChangeBoolean, onChangeNumber, State } from '@/lib/State'
-import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, Figure } from '@/lib/figures'
+import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, RecurrenceFigureState, ParameterState, Figure } from '@/lib/figures'
 import Coords from '@/lib/Coords'
 
 export function GraphPanel({state, figure, active, move}: 
@@ -136,7 +136,34 @@ export function OdeSystemPanel({state, figure, active, move} : {
     </PanelBand>
   }
 
-  export function ParameterPanel({state, figure, active, move}: 
+export function RecurrencePanel({state, figure, active, move}: 
+    {
+        state: State<RecurrenceFigureState>,
+        figure: Figure,
+        active: State<boolean>,
+        move: (f: FigureState, n: number) => void,
+    }) {
+    const graphColor = getField(state,'graphColor')
+    const webColor = getField(state,'webColor')
+    const expr: State<string> = getField(state, 'expr')
+    const start = getField(state, 'start')
+
+    return <PanelBand 
+                tex={figure.tex} 
+                color={webColor} 
+                active={active}
+                move={n => move(figure.state, n)}
+                >
+        <div className="flex flex-row px-2 items-center">
+            <span>f(x)=</span>
+            <Input expr={expr} />
+            {Number.isNaN(get(start)) && <span>clicca sul grafico per selezionare il punto iniziale</span>}
+            <Errors errors={figure.errors} />
+        </div>
+    </PanelBand>
+}
+
+export function ParameterPanel({state, figure, active, move}: 
     {
         state: State<ParameterState>,
         figure: Figure,

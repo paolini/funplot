@@ -37,6 +37,7 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
     //className="h-full w-full" 
     return <canvas
             className="border-2 border-black bg-white"
+            style={{resize:"both"}} // not working
             width={width}
             height={height}
             ref={canvasRef} 

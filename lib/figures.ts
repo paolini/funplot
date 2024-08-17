@@ -4,8 +4,9 @@ import assert from 'assert'
 import {plotGraph,plotInvertedGraph} from '@/lib/plotGraph'
 import levelPlot from './plotLevels'
 import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/plotOde'
+import { plotRecurrence } from '@/lib/plotRecurrence'
 import Coords from '@/lib/Coords'
-import { State, getField, update } from './State'
+import { State, getField, update, set } from './State'
 import { Lines } from './lines'
 import { AxesWrapper } from './plot'
 
@@ -47,6 +48,14 @@ export interface OdeFigureStateCommon {
     points: Coords[]
 }
 
+export interface RecurrenceFigureState {
+    type: 'recurrence'
+    expr: string
+    graphColor: string
+    webColor: string
+    start: number
+}
+
 export interface ParameterState {
     type: 'parameter'
     expr: string
@@ -60,6 +69,7 @@ export type FigureState =
     ImplicitFigureState |
     OdeEquationFigureState |
     OdeSystemFigureState |
+    RecurrenceFigureState |
     ParameterState
 
 export interface Figure {
@@ -81,6 +91,8 @@ export function createFigure(state: FigureState, parameters: string[]): Figure {
             return odeEquationFigure(state, parameters)
         case 'system':
             return odeSystemFigure(state, parameters)
+        case 'recurrence':
+            return recurrenceFigure(state, parameters)
         case 'parameter':
             return parameterFigure(state, parameters)
     }
@@ -329,6 +341,58 @@ async function odePlotHelper(ctx: AxesWrapper, state: OdeFigureStateCommon, fx: 
         console.error(e)
         return []
     }    
+}
+
+function recurrenceFigure(state: RecurrenceFigureState, parameterList: string[]): Figure {
+    let errors: string[] = []
+    let tex = ''
+    let compiledExpr: math.EvalFunction|null = null
+
+    try {
+        compiledExpr = compile(state.expr)
+        const parameters = Object.fromEntries(parameterList.map(p=>[p,0]))
+        const fun = getFunX(compiledExpr, parameters)
+        fun(0) // check if it is working
+    } catch(e) {
+        compiledExpr = null
+        errors.push(`${e}`)
+    }
+    try {
+        tex = `
+            \\begin{cases}
+            a_0 = ${Number.isNaN(state.start)?'???':state.start}\\\\
+            a_{n+1} = f(a_n)\\\\
+            f(x) = ${parse(state.expr).toTex()} \\\\
+            \\end{cases}`
+        // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
+    } catch(e) {
+        tex=`\\text{parse error}`
+    }
+
+    async function plot(axes: AxesWrapper, parameters: PlotParameters): Promise<Lines> {
+        if (!compiledExpr) return []
+        try {
+            const fun = getFunX(compiledExpr, parameters)
+            return [
+                ...plotGraph(axes, fun, state.graphColor),
+                ...plotRecurrence(axes, fun, state.start, state.webColor),
+            ]
+        } catch(e) {
+            console.error(e)
+            return []
+        }    
+    }
+
+    function click(statePair: State<FigureState>, point: Coords) {
+        assert(statePair[0].type === 'recurrence')
+        const recurrencePair: State<RecurrenceFigureState> = statePair as State<RecurrenceFigureState>
+        const start = getField(recurrencePair, 'start')
+        set(start, point.x)
+    }
+
+    function eval_(parameters: PlotParameters) {}
+
+    return {state, eval: eval_, plot, click, tex, errors}
 }
 
 function parameterFigure(state: ParameterState, parameters: string[]): Figure {

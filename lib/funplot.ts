@@ -2,9 +2,8 @@ import assert from 'assert'
 import { jsPDF } from 'jspdf'
 
 import { context } from '@/lib/plot'
-import { Figure, FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, ParameterState, createFigure } from '@/lib/figures'
-import { get, set, getField, update, map, extract, State, } from '@/lib/State'
-import { GraphPanel, ImplicitPanel, OdeEquationPanel, OdeSystemPanel, ParameterPanel } from '@/components/panels'
+import { FigureState } from '@/lib/figures'
+import { State, } from '@/lib/State'
 import { ContextWrapper, Axes } from '@/lib/plot'
 import { Lines } from '@/lib/lines'
 
@@ -80,6 +79,13 @@ const DEFAULT_FIGURE: {
         expr: '1',
         min: 0.0,
         max: 1.0,
+    },
+    'recurrence': {
+        type: 'recurrence',
+        expr: 'cos(x)',
+        graphColor: "#FF0000",
+        webColor: "#00FF00",
+        start: NaN,
     }
 }
 
@@ -142,6 +148,7 @@ function plotLines(plot: ContextWrapper, lines: Lines) {
 
 export function draw(ctx: ContextWrapper, lines: Lines) {
     ctx.clear()
+    ctx.ctx.lineWidth = 1
     ctx.drawAxes()
     plotLines(ctx, lines)
 }
