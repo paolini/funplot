@@ -81,8 +81,8 @@ function newFigureState(opts: any): FigureState|void {
         case 'recurrence': return {
             type: 'recurrence',
             expr: opts.e,
-            webColor: opts.webColor,
-            graphColor: opts.graphColor,
+            webColor: opts.wc,
+            graphColor: opts.gc,
             start: opts.s
         }
         case 'parameter': return {
