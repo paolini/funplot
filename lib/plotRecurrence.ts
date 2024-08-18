@@ -1,14 +1,14 @@
-import { Point, Lines } from "./lines"
+import { Point, Picture } from "./picture"
 import { AxesWrapper } from "./plot"
 
-export function plotRecurrence(plot: AxesWrapper, func: (x: number) => number, start: number, color: string): Lines {
+export function plotRecurrence(plot: AxesWrapper, func: (x: number) => number, start: number, color: string): Picture {
     var x = start
     var y = 0
 
     let points: Point[] = []
     let strongPoints: Point[] = []
 
-    let lines: Lines = [{
+    let lines: Picture = [{
         type: "line",
         color,
         width: 1,

@@ -7,7 +7,7 @@ import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/plotOde'
 import { plotRecurrence } from '@/lib/plotRecurrence'
 import Coords from '@/lib/Coords'
 import { State, getField, update, set } from './State'
-import { Lines } from './lines'
+import { Picture } from './picture'
 import { AxesWrapper } from './plot'
 
 export type PlotParameters = {
@@ -75,7 +75,7 @@ export type FigureState =
 export interface Figure {
     state: FigureState
     eval: (parameters: PlotParameters) => void
-    plot: (axes: AxesWrapper, parameters: PlotParameters) => Promise<Lines>
+    plot: (axes: AxesWrapper, parameters: PlotParameters) => Promise<Picture>
     click: (state: State<FigureState>, point: Coords) => void
     tex: string,
     errors: string[]
@@ -321,7 +321,7 @@ async function odePlotHelper(ctx: AxesWrapper, state: OdeFigureStateCommon, fx: 
             }
         }
 
-        let lines: Lines = []
+        let lines: Picture = []
         if (state.drawSlope) {
             lines.push(slopeGraph(ctx, fx, fy, !equation, state.slopeColor))
         }
@@ -369,7 +369,7 @@ function recurrenceFigure(state: RecurrenceFigureState, parameterList: string[])
         tex=`\\text{parse error}`
     }
 
-    async function plot(axes: AxesWrapper, parameters: PlotParameters): Promise<Lines> {
+    async function plot(axes: AxesWrapper, parameters: PlotParameters): Promise<Picture> {
         if (!compiledExpr) return []
         try {
             const fun = getFunX(compiledExpr, parameters)

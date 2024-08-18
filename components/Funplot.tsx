@@ -9,7 +9,7 @@ import Canvas from '@/components/Canvas'
 import { FigureState, ParameterState, createFigure } from '@/lib/figures'
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
-import { Lines } from '@/lib/lines'
+import { Picture } from '@/lib/picture'
 import { hashLoad, panelToOptions } from '@/lib/hashConverter'
 import { BANNER } from '@/app/info'
 import { IPanel, exportPdf, draw, newPanel } from '@/lib/funplot'
@@ -21,7 +21,7 @@ export default function Funplot() {
     const panelsPair = useState<IPanel[]>([])
     const messages = useState<IMessage[]>([])
     const [pending, setPending] = useState<{timeout: NodeJS.Timeout|null}>({timeout: null})
-    const [lines, setLines] = useState<Lines>([])
+    const [lines, setLines] = useState<Picture>([])
     const updateCount = useState<number>(1)
     const drawCount = useState<number>(0)
     const cursor = useState<Coords>({x:0, y:0})
@@ -103,7 +103,7 @@ export default function Funplot() {
             if (pending.timeout) clearTimeout(pending.timeout)
             pending.timeout = setTimeout(async () => {
                 // console.log('recompute')
-                let mylines: Lines = []
+                let mylines: Picture = []
                 const parameters = Object.fromEntries(parameterList.map(p => [p,0]))
 
                 // set parameters

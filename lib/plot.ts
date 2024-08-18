@@ -36,6 +36,13 @@ export interface AxesWrapper {
   radius: number,
 }
 
+type DrawAxesOptions={
+  labels?: {
+    x?: string
+    y?: string
+  }
+}
+
 /**
  * wrapping to underlying context
  * in axes coordinates
@@ -56,7 +63,7 @@ export interface ContextWrapper extends AxesWrapper {
   drawPoint: (x: number, y: number) => void,
   drawText: (x: number, y: number, text: string) => void,
   drawArrowHead: (x: number, y: number, dx: number, dy: number) => void,
-  drawAxes: () => void,
+  drawAxes: (options?:DrawAxesOptions) => void,
 }
 
 export function context(axes: Axes, width:number, height:number, ctx: DrawingContext): ContextWrapper {
@@ -123,7 +130,7 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
       ctx.stroke();
     },  
 
-    drawAxes: () => {
+    drawAxes: (options?: DrawAxesOptions) => {
       var w = width;
       var h = height;
       ctx.beginPath();
@@ -131,6 +138,8 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
       ctx.moveTo(0,y0); ctx.lineTo(w,y0);  // X axis
       ctx.moveTo(x0,0); ctx.lineTo(x0,h);  // Y axis
       ctx.stroke();
+      if (options?.labels?.x) ctx.fillText(options.labels.x,width-3,pixel_y(0)-5)
+      if (options?.labels?.y) ctx.fillText(options.labels.y,pixel_x(0)+10,10)
 
       // draw rulers
       var k = 2.0; //minimum number of ticks along the semidiagonal

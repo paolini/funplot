@@ -1,8 +1,8 @@
-import { Point, Lines } from "./lines"
+import { Point, Picture } from "./picture"
 import { AxesWrapper } from "./plot"
 import assert from "assert"
 
-export function plotInvertedGraph(plot: AxesWrapper, f: (y:number) => number, color: string): Lines {
+export function plotInvertedGraph(plot: AxesWrapper, f: (y:number) => number, color: string): Picture {
   const invertedAxes = {
     xMin: plot.yMin,
     xMax: plot.yMax,
@@ -23,8 +23,8 @@ export function plotInvertedGraph(plot: AxesWrapper, f: (y:number) => number, co
   })
 }
 
-export function newPlotGraph(plot: AxesWrapper, f: (x:number)=>number, color: string): Lines {
-  let lines: Lines = []
+export function newPlotGraph(plot: AxesWrapper, f: (x:number)=>number, color: string): Picture {
+  let lines: Picture = []
   let points: Point[] = []
 
   function pushLine() {
@@ -195,7 +195,7 @@ export function newPlotGraph(plot: AxesWrapper, f: (x:number)=>number, color: st
   return lines
 }
 
-export function plotGraph(plot: AxesWrapper, func: (x: number) => number, color: string): Lines {
+export function plotGraph(plot: AxesWrapper, func: (x: number) => number, color: string): Picture {
     var pix = (plot.xMax - plot.xMin)/plot.width
     var x = plot.xMin;
     var y = func(x);
@@ -206,7 +206,7 @@ export function plotGraph(plot: AxesWrapper, func: (x: number) => number, color:
     var ymin = plot.yMin;
     var ymax = plot.yMax;
 
-    let lines: Lines = []
+    let lines: Picture = []
     let points: Point[] = []
 
     function push() {

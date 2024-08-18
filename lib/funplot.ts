@@ -4,7 +4,7 @@ import { context } from '@/lib/plot'
 import { FigureState } from '@/lib/figures'
 import { State, } from '@/lib/State'
 import { ContextWrapper, Axes } from '@/lib/plot'
-import { Lines } from '@/lib/lines'
+import { Picture } from '@/lib/picture'
 
 
 export type IPanel = {
@@ -75,8 +75,8 @@ const DEFAULT_FIGURE: {
     'recurrence': {
         type: 'recurrence',
         expr: 'cos(x)',
-        graphColor: "#0000FF",
-        webColor: "#00FFF0",
+        graphColor: "#0000ff",
+        webColor: "#f99f03",
         start: NaN,
     },
     'parameter': {
@@ -99,7 +99,7 @@ export function newPanel(value: string|FigureState) {
     }
 }
 
-function plotLines(plot: ContextWrapper, lines: Lines) {
+function plotLines(plot: ContextWrapper, lines: Picture) {
     const arrow_step = 80
 
     lines.forEach(line => {
@@ -145,14 +145,14 @@ function plotLines(plot: ContextWrapper, lines: Lines) {
     })
   }  
 
-export function draw(ctx: ContextWrapper, lines: Lines) {
+export function draw(ctx: ContextWrapper, lines: Picture) {
     ctx.clear()
     ctx.ctx.lineWidth = 1
-    ctx.drawAxes()
+    ctx.drawAxes({labels:{x:'x',y:'y'}})
     plotLines(ctx, lines)
 }
 
-export function exportPdf(axes: Axes, width: number, height: number, lines: Lines) {
+export function exportPdf(axes: Axes, width: number, height: number, lines: Picture) {
 //    const width = canvas?.width || 640 
 //    const height = canvas?.height || 480
     const filename = 'funplot.pdf'

@@ -3,6 +3,7 @@ import { FigureState, ParameterState, Figure } from '@/lib/figures'
 import PanelBand from './PanelBand'
 import Input from './Input'
 import InputNumber from './InputNumber'
+import Errors from './Errors'
 
 export function ParameterPanel({state, figure, active, move}: 
     {
