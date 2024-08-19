@@ -60,9 +60,9 @@ export default function Funplot() {
                 click={click}
                 move={pos => set(cursor,pos)}
             />
-            { bifurcation.enabled && 
+            { bifurcation.enabled && bifurcation.axes &&
                 <PictureCanvas 
-                    axes={axes}
+                    axes={bifurcation.axes}
                     picture={bifurcationPicture}
                 />
             }
@@ -129,26 +129,36 @@ export default function Funplot() {
     function computeBifurcation() {
         let enabled = false
         let param: ParameterState|null = null
-        let axes: Axes|null = null
+        let my_axes: Axes|null = null
         for (const figure of figures) {
             const state = figure.state
             if (state.type !== "recurrence") {
                 if (state.type === "parameter") {
                     param=state
+                    my_axes={
+                        x: 0.5*(param.min+param.max),
+                        rx: 0.5*(param.max-param.min),
+                        y: get(axes).y,
+                        ry: get(axes).ry,
+                    }
                 }
                 continue
             }
             if (!state.drawBifurcation) continue
             enabled = true
         }
-        return {enabled,param}
+        return {
+            enabled,
+            param,
+            axes:my_axes
+        }
     }
 
     async function bifurcationPicture(ctx: ContextWrapper): Promise<Picture> {
         if (!bifurcation.param) return []
         let picture: Picture = [{
             type: "axes",
-            options: {labels:{x:'x', y:bifurcation.param.name}}
+            options: {labels:{y:'y', x:bifurcation.param.name}}
         }]
         for (const figure of figures) {
             if (figure.state.type !== 'recurrence') continue

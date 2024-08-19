@@ -30,7 +30,7 @@ export function hashLoad(hash: string): {axes: Axes, figures: FigureState[]}|voi
     console.log('hash:', opt)
     const axes: Axes = opt.p
     const figures: FigureState[] = []
-    if (!opt.rx || !opt.ry) {
+    if (!opt.p.rx || !opt.p.ry) {
         axes.rx = 4*opt.r/5
         axes.ry = axes.rx
     }

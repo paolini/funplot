@@ -13,7 +13,7 @@ import Canvas from "./Canvas"
  * to avoid blocking the user interface.
  */
 export default function PictureCanvas({axes, width=640, height=480, picture, click, move}:{
-    axes: State<Axes>
+    axes: State<Axes>|Axes
     width?: number
     height?: number
     click?: (coords: Coords) => void
@@ -28,7 +28,7 @@ export default function PictureCanvas({axes, width=640, height=480, picture, cli
     useEffect(() => {
         // console.log("changed!")
         update(updateCount, count => count+1)
-    }, [get(axes),picture])
+    }, [Array.isArray(axes) && get(axes),picture])
 
     return <Canvas 
         width={width} 

@@ -10,7 +10,7 @@ type PlotFunction = (ctx: ContextWrapper) => Promise<void>
 
 export default function Canvas({axes, width=640, height=480, plot, click, move}
     :{
-        axes: State<Axes>,
+        axes: Axes|State<Axes>,
         width?: number,
         height?: number,
         plot: PlotFunction,
@@ -22,12 +22,14 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
     const [dragging, setDragging] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
+    const canChangeAxes = Array.isArray(axes)
+    const theAxes = canChangeAxes ? get(axes) : axes
 
     useEffect(() => {
         setCanvas(canvasRef.current)
     }, [])
 
-    const ctx = canvas ? canvasContext(get(axes), canvas) : null
+    const ctx = canvas ? canvasContext(theAxes, canvas) : null
 
     if (ctx) {
         plot(ctx)
@@ -58,6 +60,7 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
     
     function onMouseMove(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
+        if (!canChangeAxes) return
         const pos = ctx.mouseCoords(evt)
         if (dragging) {
             set(axes, translateAxes(get(axes), dragStart.x-pos.x, dragStart.y-pos.y))
@@ -78,6 +81,7 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
     
     function zoom(delta: number, x:number, y:number) {
         if (!ctx) return
+        if (!canChangeAxes) return
         var factor = Math.exp(delta/40)
         set(axes, zoomAxes(get(axes), factor, x, y))
     }
