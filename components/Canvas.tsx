@@ -17,17 +17,12 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
         click?: (coords: Coords) => void,
         move?: (coords: Coords) => void,
     }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null)
     const [dragStart, setDragStart] = useState<{x: number, y:number}>({x:0, y:0})
     const [dragging, setDragging] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
     const canChangeAxes = Array.isArray(axes)
     const theAxes = canChangeAxes ? get(axes) : axes
-
-    useEffect(() => {
-        setCanvas(canvasRef.current)
-    }, [])
 
     const ctx = canvas ? canvasContext(theAxes, canvas) : null
 
@@ -41,7 +36,7 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
             style={{resize:"both"}} // not working
             width={width}
             height={height}
-            ref={canvasRef} 
+            ref={node => setCanvas(node)} 
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
