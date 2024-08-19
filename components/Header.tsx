@@ -17,15 +17,15 @@ return <div className="block">
             <FaShareAlt className="mt-1 mx-1 btn"/>
             <span>share</span>
         </button>
-        {/*
-        <button 
-            className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 rounded inline-flex items-center"
-            onClick={downloadPDF}
-            >
-            <FaDownload className="mt-1 mx-1 button"/>
-            <span>pdf</span>
-        </button>
-        */}
+        { false &&
+            <button 
+                className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 rounded inline-flex items-center"
+                onClick={downloadPDF}
+                >
+                <FaDownload className="mt-1 mx-1 button"/>
+                <span>pdf</span>
+            </button>
+        }
     </div>
     </div>
 }

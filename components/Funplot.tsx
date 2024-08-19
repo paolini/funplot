@@ -5,6 +5,7 @@ import { ContextWrapper } from '@/lib/plot'
 import { get, set, getField, update, map, State, } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import Canvas from '@/components/Canvas'
+import PictureCanvas from '@/components/PictureCanvas'
 
 import { FigureState, ParameterState, createFigure } from '@/lib/figures'
 import { Axes } from '@/lib/plot'
@@ -20,10 +21,6 @@ export default function Funplot() {
     const axes = useState<Axes>({x: 0, y: 0, r: 5})
     const panelsPair = useState<IPanel[]>([])
     const messages = useState<IMessage[]>([])
-    const [pending, setPending] = useState<{timeout: NodeJS.Timeout|null}>({timeout: null})
-    const [lines, setLines] = useState<Picture>([])
-    const updateCount = useState<number>(1)
-    const drawCount = useState<number>(0)
     const cursor = useState<Coords>({x:0, y:0})
     const width = useState<number>(0)
     const height = useState<number>(0)
@@ -45,11 +42,6 @@ export default function Funplot() {
 
     const figures = get(panelsPair).map(p => createFigure(p.figure, parameterList))
 
-    useEffect(() => {
-        //console.log("changed!")
-        update(updateCount, count => count+1)
-    }, [get(axes),get(panelsPair)])
-
     return <main className="flex flex-col flex-1 bg-blue-200">
         <Header 
             share={share}
@@ -62,9 +54,9 @@ export default function Funplot() {
             />
         <Messages messages={messages} />
         <div className="flex-1 h-8">  
-            <Canvas 
+            <PictureCanvas 
                 axes={axes}
-                plot={plot} 
+                picture={picture}
                 click={click}
                 move={pos => set(cursor,pos)}
             />
@@ -92,33 +84,24 @@ export default function Funplot() {
             }])
     }
 
-    function downloadPDF() {
-        exportPdf(get(axes), get(width), get(height), lines)
+    async function downloadPDF() {
+        await exportPdf(get(axes), get(width), get(height), picture)
     }
 
-    async function plot(ctx: ContextWrapper) {
-        // console.log('plot!')
-        draw(ctx, lines)
-        if (get(updateCount)!==get(drawCount)) {
-            if (pending.timeout) clearTimeout(pending.timeout)
-            pending.timeout = setTimeout(async () => {
-                // console.log('recompute')
-                let mylines: Picture = []
-                const parameters = Object.fromEntries(parameterList.map(p => [p,0]))
+    async function picture(ctx: ContextWrapper) {
+        const parameters = Object.fromEntries(parameterList.map(p => [p,0]))
 
-                // set parameters
-                for(const figure of figures) {
-                    figure.eval(parameters)
-                }
-
-                // plot
-                for(const figure of figures) {
-                    mylines = mylines.concat(await figure.plot(ctx, parameters))
-                }
-                setLines(mylines)
-                set(drawCount, get(updateCount))
-            }, 100)
+        // compute parameters
+        for(const figure of figures) {
+            figure.eval(parameters)
         }
+
+        // plot
+        let myPicture: Picture = []
+        for(const figure of figures) {
+            myPicture = myPicture.concat(await figure.plot(ctx, parameters))
+        }
+        return myPicture
     }
 
     function click(coords: Coords) {

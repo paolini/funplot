@@ -14,7 +14,6 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
         width?: number,
         height?: number,
         plot: PlotFunction,
-        resize?: (width: number, height: number)=> void,
         click?: (coords: Coords) => void,
         move?: (coords: Coords) => void,
     }) {

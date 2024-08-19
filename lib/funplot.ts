@@ -1,11 +1,10 @@
 import { jsPDF } from 'jspdf'
 
-import { context } from '@/lib/plot'
+import { context, DrawAxesOptions } from '@/lib/plot'
 import { FigureState } from '@/lib/figures'
 import { State, } from '@/lib/State'
 import { ContextWrapper, Axes } from '@/lib/plot'
 import { Picture } from '@/lib/picture'
-
 
 export type IPanel = {
     key: string,
@@ -145,14 +144,18 @@ function plotLines(plot: ContextWrapper, lines: Picture) {
     })
   }  
 
-export function draw(ctx: ContextWrapper, lines: Picture) {
+export function draw(
+    ctx: ContextWrapper, 
+    picture: Picture, 
+    options: DrawAxesOptions) 
+    {
     ctx.clear()
     ctx.ctx.lineWidth = 1
     ctx.drawAxes({labels:{x:'x',y:'y'}})
-    plotLines(ctx, lines)
+    plotLines(ctx, picture)
 }
 
-export function exportPdf(axes: Axes, width: number, height: number, lines: Picture) {
+export async function exportPdf(axes: Axes, width: number, height: number, picture: (ctx:ContextWrapper) => Promise<Picture>) {
 //    const width = canvas?.width || 640 
 //    const height = canvas?.height || 480
     const filename = 'funplot.pdf'
@@ -176,7 +179,6 @@ export function exportPdf(axes: Axes, width: number, height: number, lines: Pict
     c.scale(1.0,1.0);
     // doc.save("test.pdf")
     const myctx = context(axes, width, height, c)
-    draw(myctx, lines)        
+    draw(myctx, await picture(myctx),{/*options*/})        
     doc.save(filename)
   }
-

@@ -36,7 +36,7 @@ export interface AxesWrapper {
   radius: number,
 }
 
-type DrawAxesOptions={
+export type DrawAxesOptions={
   labels?: {
     x?: string
     y?: string
