@@ -4,7 +4,8 @@ import { format } from 'mathjs'
 export type Axes = {
   x: number,
   y: number,
-  r: number
+  rx: number,
+  ry: number
 }
 
 /**
@@ -27,13 +28,13 @@ export interface DrawingContext {
 }
 
 export interface AxesWrapper {
-  xMin: number,
-  xMax: number,
-  yMin: number,
-  yMax: number,
-  height: number,
-  width: number,
-  radius: number,
+  xMin: number
+  xMax: number
+  yMin: number
+  yMax: number
+  height: number
+  width: number
+  radius: number
 }
 
 export type DrawAxesOptions={
@@ -49,7 +50,8 @@ export type DrawAxesOptions={
  */
 export interface ContextWrapper extends AxesWrapper {
   ctx: DrawingContext,
-  scale: number,
+  scale_x: number,
+  scale_y: number,
   x0: number,
   y0: number,
 
@@ -69,21 +71,25 @@ export interface ContextWrapper extends AxesWrapper {
 export function context(axes: Axes, width:number, height:number, ctx: DrawingContext): ContextWrapper {
   const w = width/2
   const h = height/2  
-  const scale = Math.sqrt(w*w + h*h) / axes.r
-  const x0 = w - axes.x * scale
-  const y0 = h + axes.y * scale
-  const radius = axes.r
+  const scale_x = w/axes.rx
+  const scale_y = h/axes.ry
+  const x0 = w - axes.x * scale_x
+  const y0 = h + axes.y * scale_y
+  const rx = axes.rx
+  const ry = axes.ry
+  const radius = Math.sqrt(rx*rx+ry*ry)
 
-  const pixel_x = (x: number): number => (x0 + x*scale)
-  const pixel_y = (y: number): number => (y0 - y*scale)   
-  const x_pixel = (x: number): number => ((x - x0)/scale)
-  const y_pixel = (y: number): number => ((y0 - y)/scale)
+  const pixel_x = (x: number): number => (x0 + x*scale_x)
+  const pixel_y = (y: number): number => (y0 - y*scale_y)   
+  const x_pixel = (x: number): number => ((x - x0)/scale_x)
+  const y_pixel = (y: number): number => ((y0 - y)/scale_y)
 
   return {
     ctx, 
     width,
     height,
-    scale,
+    scale_x,
+    scale_y,
     x0,
     y0,
     radius,
@@ -224,17 +230,18 @@ interface CanvasContextWrapper extends ContextWrapper {
 
 export function translateAxes(axes: Axes, dx: number, dy: number): Axes {
   return {
+    ...axes,
     x: axes.x + dx,
     y: axes.y + dy,
-    r: axes.r
   }
 }
 
 export function zoomAxes(axes: Axes, factor: number, x: number, y: number): Axes {
   return {
+    rx: axes.rx / factor,
+    ry: axes.ry / factor,
     x: x + (axes.x - x) / factor,
     y: y + (axes.y - y) / factor,
-    r: axes.r / factor
   }
 }
 

@@ -4,7 +4,6 @@ import assert from 'assert'
 import { ContextWrapper } from '@/lib/plot'
 import { get, set, getField, update, map, State, } from '@/lib/State'
 import Coords from '@/lib/Coords'
-import Canvas from '@/components/Canvas'
 import PictureCanvas from '@/components/PictureCanvas'
 
 import { FigureState, ParameterState, createFigure } from '@/lib/figures'
@@ -18,7 +17,7 @@ import Header from '@/components/Header'
 import PanelElements from '@/components/PanelElements'
 
 export default function Funplot() {
-    const axes = useState<Axes>({x: 0, y: 0, r: 5})
+    const axes = useState<Axes>({x: 0, y: 0, rx: 4, ry: 3})
     const panelsPair = useState<IPanel[]>([])
     const messages = useState<IMessage[]>([])
     const cursor = useState<Coords>({x:0, y:0})
