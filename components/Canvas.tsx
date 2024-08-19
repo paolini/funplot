@@ -36,14 +36,22 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
             style={{resize:"both"}} // not working
             width={width}
             height={height}
-            ref={node => setCanvas(node)} 
+            ref={onRef}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
             onScroll={onScroll}
-            onWheel={onWheel}
+            //onWheel={onWheel}
             onBlur={() => setDragging(false)}
         />
+
+    function onRef(node: HTMLCanvasElement) {
+        if (!node) return
+        setCanvas(node)
+        // unable to fix type declaration:
+        // hack: using "unknown" to avoid check
+        node.addEventListener('wheel', (evt) => onWheel(evt as unknown as WheelEvent<HTMLCanvasElement>), {passive: false})
+    }
 
     function onMouseDown(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
@@ -88,12 +96,12 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
     }
 
     function onWheel(evt: WheelEvent<HTMLCanvasElement>) {
+        evt.preventDefault()
         console.log('onWheel')
         if (!ctx) return
         var delta = -evt.deltaY/40 
         const pos = ctx.mouseCoords(evt)
         zoom(delta, pos.x, pos.y)
-        evt.preventDefault()
     }
 
 }
