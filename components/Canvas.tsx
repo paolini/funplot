@@ -89,10 +89,12 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
     }
 
     function onWheel(evt: WheelEvent<HTMLCanvasElement>) {
+        console.log('onWheel')
         if (!ctx) return
         var delta = -evt.deltaY/40 
         const pos = ctx.mouseCoords(evt)
         zoom(delta, pos.x, pos.y)
+        evt.preventDefault()
     }
 
 }

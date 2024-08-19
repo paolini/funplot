@@ -77,6 +77,7 @@ const DEFAULT_FIGURE: {
         graphColor: "#0000ff",
         webColor: "#f99f03",
         start: NaN,
+        drawBifurcation: false,
     },
     'parameter': {
         type: 'parameter',
@@ -98,51 +99,62 @@ export function newPanel(value: string|FigureState) {
     }
 }
 
-function plotLines(plot: ContextWrapper, lines: Picture) {
+function plotPicture(plot: ContextWrapper, picture: Picture) {
     const arrow_step = 80
 
-    lines.forEach(line => {
-      if (line.type === "line") {
-        plot.ctx.strokeStyle = line.color
-        plot.ctx.lineWidth = line.width
-        plot.ctx.beginPath()
-        line.points.forEach(([x,y], i) => {
-          if (i === 0) plot.moveTo(x,y)
-          else plot.lineTo(x,y)
-        })
-        if (line.closed) plot.ctx.closePath()
-        plot.ctx.stroke()
-        if (line.arrows) {
-            for (let i=arrow_step;i<line.points.length;i+=2*arrow_step) {
-                const [x, y] = line.points[i]
-                const [xx, yy] = line.points[i-1]
-                plot.drawArrowHead(x,y, x-xx,y-yy)
+    picture.forEach(elem => {
+        switch(elem.type) {
+            case "axes": {
+                plot.drawAxes(elem.options)
             }
+            break 
+            case "line": {
+                plot.ctx.strokeStyle = elem.color
+                plot.ctx.lineWidth = elem.width
+                plot.ctx.beginPath()
+                elem.points.forEach(([x,y], i) => {
+                if (i === 0) plot.moveTo(x,y)
+                else plot.lineTo(x,y)
+                })
+                if (elem.closed) plot.ctx.closePath()
+                plot.ctx.stroke()
+                if (elem.arrows) {
+                    for (let i=arrow_step;i<elem.points.length;i+=2*arrow_step) {
+                        const [x, y] = elem.points[i]
+                        const [xx, yy] = elem.points[i-1]
+                        plot.drawArrowHead(x,y, x-xx,y-yy)
+                    }
+                }
+            }
+            break
+            case "squares": {
+                elem.squares.forEach(([[x,y],[dx,dy]]) => {
+                plot.ctx.beginPath()
+                plot.moveTo(x, y)
+                plot.lineTo(x+dx,y)
+                plot.lineTo(x+dx,y+dy)
+                plot.lineTo(x,y+dy)
+                plot.ctx.closePath()
+                plot.ctx.stroke()
+                })
+                plot.ctx.strokeStyle = "#0ff"
+            } 
+            break
+            case "segments": {
+                plot.ctx.strokeStyle = elem.color
+                plot.ctx.lineWidth = elem.width
+                elem.segments.forEach(([[x,y],[dx,dy]]) => {
+                    plot.ctx.beginPath()
+                    plot.moveTo(x,y)
+                    plot.lineTo(x+dx,y+dy)
+                    plot.ctx.stroke()
+                    if (elem.arrow) plot.drawArrowHead(x+dx,y+dy, dx,dy)
+                })
+            }
+            break
         }
-      } else if (line.type === "squares") {
-        line.squares.forEach(([[x,y],[dx,dy]]) => {
-          plot.ctx.beginPath()
-          plot.moveTo(x, y)
-          plot.lineTo(x+dx,y)
-          plot.lineTo(x+dx,y+dy)
-          plot.lineTo(x,y+dy)
-          plot.ctx.closePath()
-          plot.ctx.stroke()
-        })
-        plot.ctx.strokeStyle = "#0ff"
-      } else if (line.type === "segments") {
-        plot.ctx.strokeStyle = line.color
-        plot.ctx.lineWidth = line.width
-        line.segments.forEach(([[x,y],[dx,dy]]) => {
-            plot.ctx.beginPath()
-            plot.moveTo(x,y)
-            plot.lineTo(x+dx,y+dy)
-            plot.ctx.stroke()
-            if (line.arrow) plot.drawArrowHead(x+dx,y+dy, dx,dy)
-        })
-      }
     })
-  }  
+}  
 
 export function draw(
     ctx: ContextWrapper, 
@@ -151,8 +163,7 @@ export function draw(
     {
     ctx.clear()
     ctx.ctx.lineWidth = 1
-    ctx.drawAxes({labels:{x:'x',y:'y'}})
-    plotLines(ctx, picture)
+    plotPicture(ctx, picture)
 }
 
 export async function exportPdf(axes: Axes, width: number, height: number, picture: (ctx:ContextWrapper) => Promise<Picture>) {

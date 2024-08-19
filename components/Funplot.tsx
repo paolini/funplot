@@ -41,8 +41,9 @@ export default function Funplot() {
         .map(f => f.name)
 
     const figures = get(panelsPair).map(p => createFigure(p.figure, parameterList))
-
-    return <main className="flex flex-col flex-1 bg-blue-200">
+    const bifurcation = computeBifurcation()
+    
+    return <main className="flex-col flex-1 bg-blue-200">
         <Header 
             share={share}
             downloadPDF={downloadPDF}
@@ -53,13 +54,19 @@ export default function Funplot() {
             cursor={cursor}
             />
         <Messages messages={messages} />
-        <div className="flex-1 h-8">  
+        <div>  
             <PictureCanvas 
                 axes={axes}
                 picture={picture}
                 click={click}
                 move={pos => set(cursor,pos)}
             />
+            { bifurcation.enabled && 
+                <PictureCanvas 
+                    axes={axes}
+                    picture={bifurcationPicture}
+                />
+            }
         </div>
     </main>
 
@@ -97,7 +104,11 @@ export default function Funplot() {
         }
 
         // plot
-        let myPicture: Picture = []
+        let myPicture: Picture = [{
+            type: "axes",
+            options: {labels: {x:'x', y:'y'}}
+        }]
+
         for(const figure of figures) {
             myPicture = myPicture.concat(await figure.plot(ctx, parameters))
         }
@@ -114,6 +125,38 @@ export default function Funplot() {
                 figure.click(getField(panelPairs[i],'figure'), coords)
             }
         })
+    }
+
+    function computeBifurcation() {
+        let enabled = false
+        let param: ParameterState|null = null
+        let axes: Axes|null = null
+        for (const figure of figures) {
+            const state = figure.state
+            if (state.type !== "recurrence") {
+                if (state.type === "parameter") {
+                    param=state
+                }
+                continue
+            }
+            if (!state.drawBifurcation) continue
+            enabled = true
+        }
+        return {enabled,param}
+    }
+
+    async function bifurcationPicture(ctx: ContextWrapper): Promise<Picture> {
+        if (!bifurcation.param) return []
+        let picture: Picture = [{
+            type: "axes",
+            options: {labels:{x:'x', y:bifurcation.param.name}}
+        }]
+        for (const figure of figures) {
+            if (figure.state.type !== 'recurrence') continue
+            if (!figure.state.drawBifurcation) continue
+            if (!bifurcation.param) continue
+        }
+        return picture
     }
 }
 

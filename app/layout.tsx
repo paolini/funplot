@@ -46,7 +46,7 @@ _paq.push(['enableLinkTracking']);
         <title>FunPlot</title>
       </head>
       <body className={inter.className}>
-      <div className="w-full h-screen flex">
+      <div className="w-full flex">
         {children}
       </div>
       </body>

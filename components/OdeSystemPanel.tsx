@@ -30,9 +30,6 @@ return <PanelBand
         >
     <div className="flex flex-col">
         <div className="flex flex-row">
-            <SlopeControl value={drawSlope} color={slopeColor} />
-            <Checkbox value={gridPoints}>fill plane</Checkbox>
-            <Separator />
             <table><tbody>
                 <tr>
                     <td className="text-right min-w-max whitespace-nowrap">
@@ -51,6 +48,9 @@ return <PanelBand
                     </td>
                 </tr></tbody>
             </table>
+            <Separator />
+            <SlopeControl value={drawSlope} color={slopeColor} />
+            <Checkbox value={gridPoints}>fill plane</Checkbox>
             <Errors errors={figure.errors} />
         </div>
         <Points points={points} gridPoints={get(gridPoints)} />

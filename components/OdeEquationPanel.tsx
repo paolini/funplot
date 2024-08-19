@@ -28,11 +28,11 @@ export default function OdeEquationPanel({state, figure, active, move}:
             >
         <div className="flex flex-col">
             <div className="flex">
-                <Checkbox value={drawSlope}>draw slope field</Checkbox>
-                <Checkbox value={gridPoints}>fill plane</Checkbox>
-                <Separator />
                 <span>y&apos; = </span>
                 <Input expr={expr}/>
+                <Separator />
+                <Checkbox value={drawSlope}>draw slope field</Checkbox>
+                <Checkbox value={gridPoints}>fill plane</Checkbox>
                 <Errors errors={figure.errors} />
             </div>
             <Points points={getField(state, 'points')} gridPoints={get(gridPoints)} />

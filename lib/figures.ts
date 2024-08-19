@@ -54,6 +54,7 @@ export interface RecurrenceFigureState {
     graphColor: string
     webColor: string
     start: number
+    drawBifurcation: boolean
 }
 
 export interface ParameterState {

@@ -83,7 +83,8 @@ function newFigureState(opts: any): FigureState|void {
             expr: opts.e,
             webColor: opts.wc,
             graphColor: opts.gc,
-            start: opts.s
+            start: opts.s,
+            drawBifurcation: opts.db
         }
         case 'parameter': return {
             type: 'parameter',
