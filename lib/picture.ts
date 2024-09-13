@@ -17,12 +17,18 @@ export type PictureElement = {
 }|{
     type: "squares"
     squares: Square[]
+    fillColor: string
+    drawColor: string
 }|{
     type: "segments"
     color: string
     width: number
     arrow: boolean
     segments: Segment[]
+}|{
+    type: "points"
+    color: string
+    points: [number,number][]
 }
 
 export type Picture = PictureElement[]

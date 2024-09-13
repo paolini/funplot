@@ -79,7 +79,8 @@ export interface Figure {
     plot: (axes: AxesWrapper, parameters: PlotParameters) => Promise<Picture>
     click: (state: State<FigureState>, point: Coords) => void
     tex: string,
-    errors: string[]
+    errors: string[],
+    compiledExpr: math.EvalFunction|null
 }
 
 export function createFigure(state: FigureState, parameters: string[]): Figure {
@@ -167,7 +168,7 @@ function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
 
     function eval_(parameters: PlotParameters) {}
 
-    return { state, eval: eval_, plot, click, tex, errors }
+    return { state, eval: eval_, plot, click, tex, errors, compiledExpr}
 }
 
 function implicitFigure(state: ImplicitFigureState, parameters: string[]): Figure {
@@ -209,7 +210,7 @@ function implicitFigure(state: ImplicitFigureState, parameters: string[]): Figur
 
     function click(state: State<FigureState>, point: Coords) {}
 
-    return {state, eval: eval_, plot, click, tex, errors}
+    return {state, eval: eval_, plot, click, tex, errors, compiledExpr}
 }
 
 function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]): Figure {
@@ -248,7 +249,7 @@ function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]):
 
     function eval_(parameters: PlotParameters) {}
 
-    return {state, eval: eval_, plot, click, tex, errors}
+    return {state, eval: eval_, plot, click, tex, errors, compiledExpr}
 }
 
 function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): Figure {
@@ -297,7 +298,7 @@ function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): 
 
     function eval_(parameters: PlotParameters) {}
 
-    return {state, eval: eval_, plot, click, tex, errors}
+    return {state, eval: eval_, plot, click, tex, errors, compiledExpr: null}
 }
 
 async function odePlotHelper(ctx: AxesWrapper, state: OdeFigureStateCommon, fx: Fun2, fy: Fun2, equation: boolean) {
@@ -394,7 +395,7 @@ function recurrenceFigure(state: RecurrenceFigureState, parameterList: string[])
 
     function eval_(parameters: PlotParameters) {}
 
-    return {state, eval: eval_, plot, click, tex, errors}
+    return {state, eval: eval_, plot, click, tex, errors, compiledExpr}
 }
 
 function parameterFigure(state: ParameterState, parameters: string[]): Figure {
@@ -431,5 +432,5 @@ function parameterFigure(state: ParameterState, parameters: string[]): Figure {
         parameters[state.name] = value
     }
 
-    return { state, eval: eval_, plot, click, tex, errors }
+    return { state, eval: eval_, plot, click, tex, errors, compiledExpr:null }
 }

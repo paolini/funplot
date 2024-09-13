@@ -12,9 +12,10 @@ import Messages, { IMessage } from './Messages'
 import { Picture } from '@/lib/picture'
 import { hashLoad, panelToOptions } from '@/lib/hashConverter'
 import { BANNER } from '@/app/info'
-import { IPanel, exportPdf, draw, newPanel } from '@/lib/funplot'
+import { IPanel, exportPdf, newPanel } from '@/lib/funplot'
 import Header from '@/components/Header'
 import PanelElements from '@/components/PanelElements'
+import {plotBifurcation} from '@/lib/plotRecurrence'
 
 export default function Funplot() {
     const axes = useState<Axes>({x: 0, y: 0, rx: 4, ry: 3})
@@ -38,8 +39,11 @@ export default function Funplot() {
         .map(panel => panel.figure)
         .filter((figure: FigureState): figure is ParameterState => figure.type === 'parameter')
         .map(f => f.name)
-
     const figures = get(panelsPair).map(p => createFigure(p.figure, parameterList))
+    const parameters = Object.fromEntries(parameterList.map(p => [p,0]))
+    for(const figure of figures) {
+        figure.eval(parameters)
+    }
     const bifurcation = computeBifurcation()
     
     return <main className="flex-col flex-1 bg-blue-200">
@@ -95,13 +99,6 @@ export default function Funplot() {
     }
 
     async function picture(ctx: ContextWrapper) {
-        const parameters = Object.fromEntries(parameterList.map(p => [p,0]))
-
-        // compute parameters
-        for(const figure of figures) {
-            figure.eval(parameters)
-        }
-
         // plot
         let myPicture: Picture = [{
             type: "axes",
@@ -109,7 +106,8 @@ export default function Funplot() {
         }]
 
         for(const figure of figures) {
-            myPicture = myPicture.concat(await figure.plot(ctx, parameters))
+            const picture = await figure.plot(ctx, parameters)
+            myPicture = myPicture.concat(picture)
         }
         return myPicture
     }
@@ -164,6 +162,17 @@ export default function Funplot() {
             if (figure.state.type !== 'recurrence') continue
             if (!figure.state.drawBifurcation) continue
             if (!bifurcation.param) continue
+            const name = bifurcation.param.name
+            const compiledExpr = figure.compiledExpr
+            const func = (x:number,c:number):number => {
+                const vars = {...parameters}
+                vars.x = x
+                return compiledExpr?.evaluate({...parameters,x,[name]:c}) ?? 0.0
+            }
+            picture = [
+                ...picture,
+                ...plotBifurcation(func,ctx.xMin,ctx.xMax,10,ctx.yMin,ctx.yMax,10)
+            ]
         }
         return picture
     }

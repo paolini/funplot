@@ -25,6 +25,8 @@ export interface DrawingContext {
   lineWidth: number,
   textAlign: string,
   font: string,
+  getImageData?(sx: number, sy: number, sw: number, sh: number): ImageData
+  putImageData?(imagedata: ImageData, dx: number, dy: number): void
 }
 
 export interface AxesWrapper {
@@ -212,6 +214,23 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
       }
     }
   }
+
+  function drawPoints(points:[number,number][], r:number, g:number, b:number) {
+    if (!ctx.getImageData) return
+    if (!ctx.putImageData) return
+    var canvasData = ctx.getImageData(0, 0, width, height)
+    for (var i=0; i<points.length; ++i) {
+        var x = Math.floor(pixel_x(points[i][0]));
+        var y = Math.floor(pixel_y(points[i][1]));
+        if (x<0 || x>= width || y<0 || y>= height) continue;
+        canvasData.data[(y * width + x) * 4 + 0] = r;
+        canvasData.data[(y * width + x) * 4 + 1] = g;
+        canvasData.data[(y * width + x) * 4 + 2] = b;
+        canvasData.data[(y * width + x) * 4 + 3] = 255;
+    }
+    ctx.putImageData(canvasData, 0, 0);
+}
+
 }
 
 function getMousePos(canvas: HTMLCanvasElement, evt: MouseEvent<HTMLCanvasElement>): {x: number, y: number} {

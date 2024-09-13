@@ -128,14 +128,15 @@ function plotPicture(plot: ContextWrapper, picture: Picture) {
             }
             break
             case "squares": {
+                if (elem.drawColor) plot.ctx.strokeStyle=elem.drawColor
                 elem.squares.forEach(([[x,y],[dx,dy]]) => {
-                plot.ctx.beginPath()
-                plot.moveTo(x, y)
-                plot.lineTo(x+dx,y)
-                plot.lineTo(x+dx,y+dy)
-                plot.lineTo(x,y+dy)
-                plot.ctx.closePath()
-                plot.ctx.stroke()
+                    plot.ctx.beginPath()
+                    plot.moveTo(x, y)
+                    plot.lineTo(x+dx,y)
+                    plot.lineTo(x+dx,y+dy)
+                    plot.lineTo(x,y+dy)
+                    plot.ctx.closePath()
+                    if (elem.drawColor) plot.ctx.stroke()
                 })
                 plot.ctx.strokeStyle = "#0ff"
             } 
@@ -186,8 +187,8 @@ export async function exportPdf(axes: Axes, width: number, height: number, pictu
     console.log("autopaging: " + c.autoPaging)
     //ctx.lineWidth = 1.0;
     doc.setFontSize(10)
-    c.translate(margin, margin);
-    c.scale(1.0,1.0);
+    c.translate(margin, margin)
+    c.scale(1.0,1.0)
     // doc.save("test.pdf")
     const myctx = context(axes, width, height, c)
     draw(myctx, await picture(myctx),{/*options*/})        
