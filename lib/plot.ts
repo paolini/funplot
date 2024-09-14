@@ -233,7 +233,7 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
 
 }
 
-function getMousePos(canvas: HTMLCanvasElement, evt: MouseEvent<HTMLCanvasElement>): {x: number, y: number} {
+export function getMousePos(canvas: HTMLCanvasElement, evt: MouseEvent<HTMLCanvasElement>): {x: number, y: number} {
   const rect = canvas.getBoundingClientRect()
   return {
     x: evt.clientX - rect.left,

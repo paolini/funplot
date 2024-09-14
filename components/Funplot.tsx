@@ -22,8 +22,8 @@ export default function Funplot() {
     const panelsPair = useState<IPanel[]>([])
     const messages = useState<IMessage[]>([])
     const cursor = useState<Coords>({x:0, y:0})
-    const width = useState<number>(0)
-    const height = useState<number>(0)
+    const width = useState(640)
+    const height = useState(480)
 
     useEffect(() => {
         /* load data from url */
@@ -46,7 +46,7 @@ export default function Funplot() {
     }
     const bifurcation = computeBifurcation()
     
-    return <main className="flex-col flex-1 bg-blue-200">
+    return <main className="h-screen flex-col flex-1 bg-blue-200">
         <Header 
             share={share}
             downloadPDF={downloadPDF}
@@ -63,6 +63,9 @@ export default function Funplot() {
                 picture={picture}
                 click={click}
                 move={pos => set(cursor,pos)}
+                resize={resize}
+                width={get(width)}
+                height={get(height)}
             />
             { bifurcation.enabled && bifurcation.axes &&
                 <PictureCanvas 
@@ -122,6 +125,11 @@ export default function Funplot() {
                 figure.click(getField(panelPairs[i],'figure'), coords)
             }
         })
+    }
+
+    function resize(w: number, h: number) {
+        set(width,w)
+        set(height,h)
     }
 
     function computeBifurcation() {

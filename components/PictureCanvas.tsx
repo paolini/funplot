@@ -12,12 +12,13 @@ import Canvas from "./Canvas"
  * be slow to compute. So it uses a cache and timeout
  * to avoid blocking the user interface.
  */
-export default function PictureCanvas({axes, width=640, height=480, picture, click, move}:{
+export default function PictureCanvas({axes, width=640, height=480, picture, click, move, resize}:{
     axes: State<Axes>|Axes
     width?: number
     height?: number
     click?: (coords: Coords) => void
     move?: (coords: Coords) => void
+    resize?: (width: number, height: number) => void
     picture: (ctx: ContextWrapper) => Promise<Picture>
 }) {
     const [pending, setPending] = useState<{timeout: NodeJS.Timeout|null}>({timeout: null})
@@ -37,6 +38,7 @@ export default function PictureCanvas({axes, width=640, height=480, picture, cli
         plot={plot}
         click={click}
         move={move}
+        resize={resize}
     />
 
     async function plot(ctx: ContextWrapper) {

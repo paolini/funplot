@@ -5,10 +5,11 @@ import {useRef, useState, useEffect,
 import { Axes, ContextWrapper, canvasContext, translateAxes, zoomAxes } from '@/lib/plot'
 import { set, get, State } from '@/lib/State'
 import Coords from '@/lib/Coords'
+import { getMousePos } from '@/lib/plot'
 
 type PlotFunction = (ctx: ContextWrapper) => Promise<void>
 
-export default function Canvas({axes, width=640, height=480, plot, click, move}
+export default function Canvas({axes, width=640, height=480, plot, click, move, resize}
     :{
         axes: Axes|State<Axes>,
         width?: number,
@@ -16,9 +17,11 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
         plot: PlotFunction,
         click?: (coords: Coords) => void,
         move?: (coords: Coords) => void,
+        resize?: (width: number, height: number) => void,
     }) {
     const [dragStart, setDragStart] = useState<{x: number, y:number}>({x:0, y:0})
     const [dragging, setDragging] = useState<boolean>(false)
+    const [resizing, setResizing] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
     const canChangeAxes = Array.isArray(axes)
@@ -55,18 +58,35 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
 
     function onMouseDown(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
-        document.body.style.userSelect = 'none'        
+        if (!canvas) return
+        document.body.style.userSelect = 'none'
         setDragStart(ctx.mouseCoords(evt))
         setMoved(false)
-        setDragging(true)
+        if (!resize) console.log(`not resize`)
+        const {x,y} = getMousePos(canvas, evt)
+        if (resize && x>width-10 && y>height-10) {
+            setResizing(true)
+        } else {
+            setDragging(true)
+        }
     }
     
     function onMouseMove(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
         if (!canChangeAxes) return
+        if (!canvas) return
         const pos = ctx.mouseCoords(evt)
+        const {x,y} = getMousePos(canvas,evt)
+        if (x>width-10 && y>height-10) {
+            document.body.style.cursor="se-resize"
+        } else {
+            document.body.style.cursor="auto"
+        }
         if (dragging) {
             set(axes, translateAxes(get(axes), dragStart.x-pos.x, dragStart.y-pos.y))
+        }
+        if (resizing && resize) {
+            resize(x+5, y+5)
         }
         if (move) move(pos)
         setMoved(true)
@@ -75,11 +95,13 @@ export default function Canvas({axes, width=640, height=480, plot, click, move}
     function onMouseUp(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
         const pos = ctx.mouseCoords(evt);
-        if (!moved) { // it's a click!
+        if (!moved && !resizing) { // it's a click!
             if (click) click(pos)
         }
         setMoved(false)
         setDragging(false)
+        setResizing(false)
+        document.body.style.cursor = "auto"
     }
     
     function zoom(delta: number, x:number, y:number) {
