@@ -45,7 +45,8 @@ export default function Canvas({axes, width=640, height=480, plot, click, move, 
             onMouseUp={onMouseUp}
             onScroll={onScroll}
             //onWheel={onWheel}
-            onBlur={() => setDragging(false)}
+            onBlur={blur}
+            onMouseLeave={blur}
         />
 
     function onRef(node: HTMLCanvasElement) {
@@ -86,7 +87,7 @@ export default function Canvas({axes, width=640, height=480, plot, click, move, 
             set(axes, translateAxes(get(axes), dragStart.x-pos.x, dragStart.y-pos.y))
         }
         if (resizing && resize) {
-            resize(x+5, y+5)
+            resize(x+10, y+10)
         }
         if (move) move(pos)
         setMoved(true)
@@ -124,6 +125,13 @@ export default function Canvas({axes, width=640, height=480, plot, click, move, 
         var delta = -evt.deltaY/40 
         const pos = ctx.mouseCoords(evt)
         zoom(delta, pos.x, pos.y)
+    }
+
+    function blur() {
+        console.log('blur')
+        setDragging(false)
+        setResizing(false)
+        document.body.style.cursor = "auto"
     }
 
 }

@@ -128,6 +128,14 @@ export default function Funplot() {
     }
 
     function resize(w: number, h: number) {
+        const a = get(axes)
+        const d = Math.sqrt((a.rx*a.rx + a.ry*a.ry)/(w*w+h*h))
+        set(axes, {
+            x: a.x,
+            y: a.y,
+            rx: get(width)*d,
+            ry: get(height)*d,
+        })
         set(width,w)
         set(height,h)
     }
