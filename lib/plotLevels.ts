@@ -324,7 +324,9 @@ export default function levelPlot(plot: AxesWrapper, f: Fun, color: string): Pic
     }
     lines.push({
       type: "squares",
-      squares: out
+      squares: out,
+      fillColor: "none",
+      drawColor: "black",
     })
   }
 
