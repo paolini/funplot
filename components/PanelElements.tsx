@@ -14,7 +14,7 @@ import Coords from '@/lib/Coords'
 export default function PanelElements({panelsPair, figures, cursor}:{
     panelsPair: State<IPanel[]>,
     figures: Figure[],
-    cursor: State<Coords>,
+    cursor?: Coords,
 }) {
     const panels = get(panelsPair)
     assert(panels.length === figures.length)
@@ -100,7 +100,8 @@ export default function PanelElements({panelsPair, figures, cursor}:{
                 <option value="" disabled={true}>-------</option>
                 <option value="parameter">new parameter</option>
             </select>
-            <span>x={get(cursor).x}</span><span className="ms-2">y={get(cursor).y}</span>
+            {cursor && 
+                <><span>x={cursor.x}</span><span className="ms-2">y={cursor.y}</span></>}
         </div>
     </>
 }

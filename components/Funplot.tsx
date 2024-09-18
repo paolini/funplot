@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import assert from 'assert'
 
 import { ContextWrapper } from '@/lib/plot'
@@ -18,21 +18,24 @@ import PanelElements from '@/components/PanelElements'
 import {plotBifurcation} from '@/lib/plotRecurrence'
 
 export default function Funplot() {
-    const axes = useState<Axes>({x: 0, y: 0, rx: 4, ry: 3})
+    const [axes, setAxes] = useState<Axes>({x: 0, y: 0, rx: 4, ry: 3})
     const panelsPair = useState<IPanel[]>([])
     const messages = useState<IMessage[]>([])
-    const cursor = useState<Coords>({x:0, y:0})
-    const width = useState(640)
-    const height = useState(480)
+    const [cursor,setCursor] = useState<Coords>({x:0, y:0})
+    const [width, setWidth] = useState(0)
+    const [height, setHeight] = useState(0)
+    const move = useCallback((coords: Coords) => {
+        setCursor(coords)
+    },[setCursor])
 
-    console.log("Funplot")
+    // console.log("Funplot")
 
     useEffect(() => {
         /* load data from url */
         console.log("loadFromHash")
         const load = hashLoad(window.location.hash)
         if (!load) return
-        set(axes, load.axes)
+        setAxes(load.axes)
         set(panelsPair, load.figures.map(newPanel))
         console.log(BANNER)
     }, [])
@@ -62,9 +65,11 @@ export default function Funplot() {
         <div>
             <PictureCanvas 
                 axes={axes}
+                setAxes={setAxes}
                 picture={picture}
                 click={click}
-                move={pos => set(cursor,pos)}
+                move={move}
+                resize={resize}
                 />
             { bifurcation.enabled && bifurcation.axes &&
                 <PictureCanvas 
@@ -75,10 +80,15 @@ export default function Funplot() {
         </div>
     </main>
 
+    function resize(w: number, h: number) {
+        setWidth(w)
+        setHeight(h)
+    }
+
     function share() {
         const panels = get(panelsPair)
         const opt = {
-            p: get(axes),
+            p: axes,
             l: panels.map(panelToOptions),
         }
         const hash = encodeURIComponent(JSON.stringify(opt))
@@ -97,7 +107,8 @@ export default function Funplot() {
     }
 
     async function downloadPDF() {
-        await exportPdf(get(axes), get(width), get(height), picture)
+        if (!width || !height) throw new Error(`invalid size ${width}x${height}`)
+        await exportPdf(axes, width, height, picture)
     }
 
     async function picture(ctx: ContextWrapper) {
@@ -138,8 +149,8 @@ export default function Funplot() {
                     my_axes={
                         x: 0.5*(param.min+param.max),
                         rx: 0.5*(param.max-param.min),
-                        y: get(axes).y,
-                        ry: get(axes).ry,
+                        y: axes.y,
+                        ry: axes.ry,
                     }
                 }
                 continue

@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
-import useResizeObserver from '@/lib/useResizeObserver'
+import { useState, useEffect, useCallback, SetStateAction, Dispatch } from "react"
 
 import { get, set, update, State } from "@/lib/State"
 import { draw } from '@/lib/funplot'
@@ -13,56 +12,37 @@ import Canvas from "./Canvas"
  * be slow to compute. So it uses a cache and timeout
  * to avoid blocking the user interface.
  */
-export default function PictureCanvas({axes, picture, click, move}:{
-    axes: State<Axes>|Axes
+export default function PictureCanvas({axes, setAxes, picture, click, move, resize}:{
+    axes: Axes,
+    setAxes?: Dispatch<SetStateAction<Axes>>,
     click?: (coords: Coords) => void
-    move?: (coords: Coords) => void
+    move?: (coords: Coords) => void,
+    resize?: (width: number, height: number) => void,
     picture: (ctx: ContextWrapper) => Promise<Picture>
 }) {
     const [pending, setPending] = useState<{timeout: NodeJS.Timeout|null}>({timeout: null})
     const [pictureCache,setPictureCache]=useState<Picture|null>(null)
     const updateCount = useState<number>(1)
     const drawCount = useState<number>(0)
-    const onResize = useCallback((target: HTMLDivElement) => {
-        // Handle the resize event
-        console.log("resize")
-        update(updateCount, count => count+1)
-        if (Array.isArray(axes)) {
-            const w = target.clientWidth
-            const h = target.clientHeight
-            const a = get(axes)
-            const d = Math.sqrt((a.rx*a.rx + a.ry*a.ry)/(w*w+h*h))
-            set(axes, {
-                x: a.x,
-                y: a.y,
-                rx: w*d,
-                ry: h*d,
-            })
-            }
-        }, []);
-    const resizeRef = useResizeObserver(onResize);
 
-    console.log(`PictureCanvas ${get(updateCount)}`)
+    // console.log(`PictureCanvas ${get(updateCount)}`)
 
     useEffect(() => {
-        console.log("changed!")
+        //console.log("changed!")
         update(updateCount, count => count+1)
-    }, [Array.isArray(axes) && get(axes),picture])
+    }, [axes,picture])
 
-    return <div style={{resize:"both",overflow:"auto",width:"fit-content"}}
-                ref={resizeRef}
-            >
-        <Canvas 
-            axes={axes} 
+    return <Canvas 
+            axes={axes}
+            setAxes={setAxes} 
             plot={plot}
             click={click}
             move={move}
-            updateCount={get(updateCount)}
+            resize={resize}
         />
-    </div>
 
     async function plot(ctx: ContextWrapper) {
-        console.log('plot!')
+        // console.log('plot!')
         if (pictureCache !== null) {
             draw(ctx, pictureCache, {labels:{x:'c',y:'x'}})
         }
