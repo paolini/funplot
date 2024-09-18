@@ -47,7 +47,7 @@ export default function Canvas({axes,  setAxes, plot, click, move, resize}
     const ctx = canvas ? canvasContext(axes, canvas) : null
 
     //className="h-full w-full" 
-    return <div ref={resizeRef} style={{resize:"both",overflow:"auto",width:"fit-content"}}>
+    return <div ref={resizeRef} style={{resize:"both",overflow:"auto",width:"640px",height:"480px"}}>
         <canvas
             className="border-2 border-black bg-white"
             style={{width: "100%",height: "100%"}}
@@ -109,6 +109,7 @@ export default function Canvas({axes,  setAxes, plot, click, move, resize}
     }
     
     function zoom(delta: number, x:number, y:number) {
+        //console.log('zoom')
         if (!ctx) return
         var factor = Math.exp(delta/40)
         if (setAxes) setAxes(zoomAxes(axes, factor, x, y))
