@@ -1,11 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
 import assert from 'assert'
+
 import { ContextWrapper } from '@/lib/plot'
 import { get, set, getField, update, map, State, } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import PictureCanvas from '@/components/PictureCanvas'
-
 import { FigureState, ParameterState, createFigure } from '@/lib/figures'
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
@@ -24,6 +24,8 @@ export default function Funplot() {
     const cursor = useState<Coords>({x:0, y:0})
     const width = useState(640)
     const height = useState(480)
+
+    console.log("Funplot")
 
     useEffect(() => {
         /* load data from url */
@@ -57,16 +59,13 @@ export default function Funplot() {
             cursor={cursor}
             />
         <Messages messages={messages} />
-        <div>  
+        <div>
             <PictureCanvas 
                 axes={axes}
                 picture={picture}
                 click={click}
                 move={pos => set(cursor,pos)}
-                resize={resize}
-                width={get(width)}
-                height={get(height)}
-            />
+                />
             { bifurcation.enabled && bifurcation.axes &&
                 <PictureCanvas 
                     axes={bifurcation.axes}
@@ -125,19 +124,6 @@ export default function Funplot() {
                 figure.click(getField(panelPairs[i],'figure'), coords)
             }
         })
-    }
-
-    function resize(w: number, h: number) {
-        const a = get(axes)
-        const d = Math.sqrt((a.rx*a.rx + a.ry*a.ry)/(w*w+h*h))
-        set(axes, {
-            x: a.x,
-            y: a.y,
-            rx: get(width)*d,
-            ry: get(height)*d,
-        })
-        set(width,w)
-        set(height,h)
     }
 
     function computeBifurcation() {

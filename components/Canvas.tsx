@@ -9,25 +9,24 @@ import { getMousePos } from '@/lib/plot'
 
 type PlotFunction = (ctx: ContextWrapper) => Promise<void>
 
-export default function Canvas({axes, width=640, height=480, plot, click, move, resize}
+export default function Canvas({axes, plot, click, move, updateCount}
     :{
         axes: Axes|State<Axes>,
-        width?: number,
-        height?: number,
         plot: PlotFunction,
         click?: (coords: Coords) => void,
         move?: (coords: Coords) => void,
-        resize?: (width: number, height: number) => void,
+        updateCount?: number,
     }) {
     const [dragStart, setDragStart] = useState<{x: number, y:number}>({x:0, y:0})
     const [dragging, setDragging] = useState<boolean>(false)
-    const [resizing, setResizing] = useState<boolean>(false)
     const [moved, setMoved] = useState<boolean>(false)
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
     const canChangeAxes = Array.isArray(axes)
     const theAxes = canChangeAxes ? get(axes) : axes
-
+    const width = canvas ? canvas.width : 0
+    const height = canvas ? canvas.height : 0
     const ctx = canvas ? canvasContext(theAxes, canvas) : null
+    console.log(`canvas ${updateCount} ${width}x${height}`)
 
     if (ctx) {
         plot(ctx)
@@ -36,25 +35,26 @@ export default function Canvas({axes, width=640, height=480, plot, click, move, 
     //className="h-full w-full" 
     return <canvas
             className="border-2 border-black bg-white"
-            style={{resize:"both"}} // not working
-            width={width}
-            height={height}
+            style={{width: "100%",height: "100%"}}
             ref={onRef}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
             onScroll={onScroll}
             //onWheel={onWheel}
-            onBlur={blur}
+            //onBlur={blur}
             onMouseLeave={blur}
         />
 
-    function onRef(node: HTMLCanvasElement) {
-        if (!node) return
-        setCanvas(node)
+    function onRef(myCanvas: HTMLCanvasElement) {
+        console.log('onRef ${myCanvas}')
+        if (!myCanvas) return
         // unable to fix type declaration:
         // hack: using "unknown" to avoid check
-        node.addEventListener('wheel', (evt) => onWheel(evt as unknown as WheelEvent<HTMLCanvasElement>), {passive: false})
+        myCanvas.addEventListener('wheel', (evt) => onWheel(evt as unknown as WheelEvent<HTMLCanvasElement>), {passive: false})
+        myCanvas.width = myCanvas.clientWidth
+        myCanvas.height = myCanvas.clientHeight
+        setCanvas(myCanvas)
     }
 
     function onMouseDown(evt: MouseEvent<HTMLCanvasElement>) {
@@ -63,13 +63,7 @@ export default function Canvas({axes, width=640, height=480, plot, click, move, 
         document.body.style.userSelect = 'none'
         setDragStart(ctx.mouseCoords(evt))
         setMoved(false)
-        if (!resize) console.log(`not resize`)
-        const {x,y} = getMousePos(canvas, evt)
-        if (resize && x>width-10 && y>height-10) {
-            setResizing(true)
-        } else {
-            setDragging(true)
-        }
+        setDragging(true)
     }
     
     function onMouseMove(evt: MouseEvent<HTMLCanvasElement>) {
@@ -77,17 +71,9 @@ export default function Canvas({axes, width=640, height=480, plot, click, move, 
         if (!canChangeAxes) return
         if (!canvas) return
         const pos = ctx.mouseCoords(evt)
-        const {x,y} = getMousePos(canvas,evt)
-        if (x>width-10 && y>height-10) {
-            document.body.style.cursor="se-resize"
-        } else {
-            document.body.style.cursor="auto"
-        }
+        document.body.style.cursor="auto"
         if (dragging) {
             set(axes, translateAxes(get(axes), dragStart.x-pos.x, dragStart.y-pos.y))
-        }
-        if (resizing && resize) {
-            resize(x+10, y+10)
         }
         if (move) move(pos)
         setMoved(true)
@@ -96,12 +82,11 @@ export default function Canvas({axes, width=640, height=480, plot, click, move, 
     function onMouseUp(evt: MouseEvent<HTMLCanvasElement>) {
         if (!ctx) return
         const pos = ctx.mouseCoords(evt);
-        if (!moved && !resizing) { // it's a click!
+        if (!moved) { // it's a click!
             if (click) click(pos)
         }
         setMoved(false)
         setDragging(false)
-        setResizing(false)
         document.body.style.cursor = "auto"
     }
     
@@ -130,7 +115,6 @@ export default function Canvas({axes, width=640, height=480, plot, click, move, 
     function blur() {
         console.log('blur')
         setDragging(false)
-        setResizing(false)
         document.body.style.cursor = "auto"
     }
 
