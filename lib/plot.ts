@@ -141,19 +141,31 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
     drawAxes: (options?: DrawAxesOptions) => {
       var w = width;
       var h = height;
-      ctx.beginPath();
-      ctx.moveTo(0,y0); ctx.lineTo(w,y0);  // X axis
-      ctx.moveTo(x0,0); ctx.lineTo(x0,h);  // Y axis
-      ctx.stroke();
-      if (options?.labels?.x) ctx.fillText(options.labels.x,width-3,pixel_y(0)-5)
-      if (options?.labels?.y) ctx.fillText(options.labels.y,pixel_x(0)+10,10)
 
-      // draw rulers
+      // save context state and apply high-contrast styling for axes/ticks/labels
+      ctx.save();
+      ctx.strokeStyle = "#787777";
+      ctx.fillStyle = "#747474";
+      ctx.lineWidth = 1;
+      ctx.lineJoin = "miter";
+      ctx.lineCap = "butt";
+
+      // draw main axes with slightly increased thickness
+      ctx.beginPath();
+      ctx.moveTo(0, Math.round(y0) + 0.5); ctx.lineTo(w, Math.round(y0) + 0.5);  // X axis
+      ctx.moveTo(Math.round(x0) + 0.5, 0); ctx.lineTo(Math.round(x0) + 0.5, h);  // Y axis
+      ctx.stroke();
+
+      // axis labels
+      if (options?.labels?.x) ctx.fillText(options.labels.x, width - 6, pixel_y(0) - 8);
+      if (options?.labels?.y) ctx.fillText(options.labels.y, pixel_x(0) + 12, 14);
+
+      // draw rulers (ticks and numbers)
       var k = 2.0; //minimum number of ticks along the semidiagonal
       var pow = Math.floor(Math.log(radius/k) / Math.log(10.0));
       var dx = Math.pow(10.0,pow);
 
-      ctx.font = "10px Arial"
+      ctx.font = "11px Arial";
 
       function round(x: number) {
         return format(x, {precision: 14});
@@ -172,16 +184,17 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
         y=height;
         text_dir = 1;
       }
-      ctx.textAlign = "center"
+      ctx.textAlign = "center";
       for (var i = Math.floor(x_pixel(0)/dx*10)+1; i<x_pixel(width)/dx*10; i++) {
         if (i==0) continue;
         x = pixel_x(i*dx/10);
         ctx.beginPath();
-        ctx.moveTo(x,y);
-        ctx.lineTo(x,y - tick_dir * (i%10==0 ? 6 : (i%5 == 0) ? 4:2));
+        const tickLenX = (i%10==0 ? 8 : (i%5 == 0) ? 6 : 3);
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y - tick_dir * tickLenX);
         ctx.stroke();
         if (i%10 == 0) {
-          ctx.fillText(`${round(i*dx/10)}`, x, y-text_dir*10.0);
+          ctx.fillText(`${round(i*dx/10)}`, x, y - text_dir * 12.0);
         }
       }
 
@@ -203,14 +216,18 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
         if (i==0) continue;
         y = pixel_y(i*dx/10);
         ctx.beginPath();
-        ctx.moveTo(x,y);
-        ctx.lineTo(x + tick_dir * (i%10==0 ? 6 : (i%5 == 0) ? 4:2), y);
+        const tickLenY = (i%10==0 ? 8 : (i%5 == 0) ? 6 : 3);
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + tick_dir * tickLenY, y);
         ctx.stroke();
         if (i%10 == 0) {
-          // ugly hack to get (hopefully!) correct digits
-          ctx.fillText(`${round(i*dx/10)}`, x+text_dir*2, y+3);
+          // draw labels with slight offset for readability
+          ctx.fillText(`${round(i*dx/10)}`, x + text_dir * 3, y + 4);
         }
       }
+
+      // restore previous drawing state
+      ctx.restore();
     }
   }
 
