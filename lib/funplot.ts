@@ -46,7 +46,7 @@ const DEFAULT_FIGURE: {
     },
     'implicit': {
         type: 'implicit',
-        color: '#00f',
+        color: '#f97316',
         expr: 'x^4-x^2+y^2',
     },
     'ode': {

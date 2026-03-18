@@ -6,7 +6,7 @@ export default function Input({expr,size,right}:{
     right?: boolean,
 }){
     return <input 
-        className="h-8 border p-1 bg-blue-100" 
+        className="app-input" 
         style={{textAlign: right?'right':'left'}}
         type="text" 
         value={get(expr)} 

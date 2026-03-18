@@ -49,7 +49,7 @@ export default function Canvas({axes,  setAxes, plot, click, move, resize}
     //className="h-full w-full" 
     return <div ref={resizeRef} style={{resize:"both",overflow:"auto",width:"640px",height:"480px"}}>
         <canvas
-            className="border-2 border-black bg-white"
+            className="app-canvas"
             style={{width: "100%",height: "100%"}}
             ref={onRef}
             onMouseDown={onMouseDown}
@@ -72,6 +72,18 @@ export default function Canvas({axes,  setAxes, plot, click, move, resize}
         myCanvas.height = myCanvas.clientHeight
         setCanvas(myCanvas)
         const myCtx = canvasContext(axes, myCanvas)
+        // set canvas drawing colors from CSS variables so dark mode works
+        try {
+            const cs = getComputedStyle(myCanvas)
+            const fg = cs.getPropertyValue('--foreground-rgb').trim()
+            const canvasBorder = cs.getPropertyValue('--canvas-border-rgb').trim()
+            if (myCtx && myCtx.ctx) {
+                if (fg) myCtx.ctx.fillStyle = `rgb(${fg})`
+                if (canvasBorder) myCtx.ctx.strokeStyle = `rgb(${canvasBorder})`
+            }
+        } catch (e) {
+            // ignore if getComputedStyle not available
+        }
         //console.log(`Canvas plot ${myCtx!==null}`)
         if (myCtx) plot(myCtx)
     }

@@ -6,15 +6,117 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  --main-bg: rgb(112, 214, 237);
+  --input-bg: #dbeafe; /* light blue */
+  --input-error-bg: #fca5a5; /* light red */
+  --canvas-bg: #ffffff;
+  --canvas-border-rgb: 0, 0, 0;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --foreground-rgb: 255, 255, 255;
     --background-rgb: 0, 0, 0;
+    --main-bg: rgb(5, 5, 120);
+    --input-bg: #1f2937; /* dark gray */
+    --input-error-bg: #7f1d1d; /* darker red */
+    --canvas-bg: #0b1220;
+    --canvas-border-rgb: 74,85,104;
   }
 }
 
 body {
   color: rgb(var(--foreground-rgb));
+}
+
+@layer components {
+  .app-main {
+    @apply h-screen flex-col flex-1;
+    background-color: var(--main-bg);
+  }
+
+  .app-input {
+    @apply h-8 border p-1;
+    background-color: var(--input-bg);
+  }
+
+  .app-input--error {
+    background-color: var(--input-error-bg);
+  }
+
+  .app-button {
+    @apply border mx-1 px-4 rounded inline-flex items-center;
+    color: rgb(var(--foreground-rgb));
+    background-color: var(--button-bg);
+  }
+
+  .app-button:hover {
+    background-color: var(--button-bg-hover);
+  }
+
+  .app-canvas {
+    @apply border-2;
+    background-color: var(--canvas-bg);
+    border-color: rgb(var(--canvas-border-rgb));
+  }
+
+  .app-message {
+    @apply m-1 rounded px-2 py-1 flex items-center gap-2;
+    color: rgb(var(--message-fg-rgb));
+    background-color: rgb(var(--message-bg-rgb));
+  }
+
+  .app-message-close {
+    @apply m-0 p-1 cursor-pointer rounded;
+    background: transparent;
+  }
+
+  .app-message--info { --message-bg-rgb: 255,255,255; --message-fg-rgb: 0,0,0; }
+  .app-message--error { --message-bg-rgb: 220,38,38; --message-fg-rgb: 255,255,255; }
+  .app-message--warning { --message-bg-rgb: 250,204,21; --message-fg-rgb: 0,0,0; }
+
+  .app-select {
+    @apply h-8 border p-1;
+    background-color: var(--input-bg);
+    color: rgb(var(--foreground-rgb));
+  }
+
+  .app-select:focus {
+    outline: 2px solid rgba(59,130,246,0.5);
+    outline-offset: 2px;
+  }
+}
+
+:root {
+  --button-bg: #e5e7eb; /* gray-200 */
+  --button-bg-hover: #d1d5db; /* gray-300 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --button-bg: #374151; /* gray-700 */
+    --button-bg-hover: #4b5563; /* gray-600 */
+  }
+
+  /* dark overrides for messages */
+  .app-message--info { --message-bg-rgb: 15,23,42; --message-fg-rgb: 255,255,255; }
+  .app-message--error { --message-bg-rgb: 139,11,11; --message-fg-rgb: 255,255,255; }
+  .app-message--warning { --message-bg-rgb: 120,53,15; --message-fg-rgb: 255,255,255; }
+}
+
+@layer components {
+  .app-icon-button {
+    @apply p-1 rounded inline-flex items-center justify-center w-8 h-8 border-0 m-0;
+    background-color: var(--button-bg);
+  }
+
+  .app-icon-button:hover {
+    background-color: var(--button-bg-hover);
+  }
+
+  .app-icon {
+    @apply text-base;
+    display: inline-block;
+    line-height: 1;
+  }
 }

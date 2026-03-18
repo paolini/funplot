@@ -10,7 +10,7 @@ export default function InputNumber({expr,size,right}:{
     const value = useState<string>(`${get(expr)}`)
     const error=useState<boolean>(false)
     return <input 
-        className={`h-8 border p-1 ${get(error)?'bg-red-300':'bg-blue-100'}`}
+        className={`app-input ${get(error)?'app-input--error':''}`}
         style={{textAlign: right?'right':'left'}}
         type="text" 
         value={get(value)} 

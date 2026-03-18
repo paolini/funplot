@@ -87,7 +87,7 @@ export default function PanelElements({panelsPair, figures, cursor}:{
         <div className="flex flex-row">
             <select 
                 value="" 
-                className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800" 
+                className="app-select"
                 onChange={evt => update(panelsPair, panels => [...panels, newPanel(evt.target.value)])}
             >
                 <option value="" disabled={true}>choose plot type</option>

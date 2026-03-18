@@ -19,9 +19,15 @@ export default function PanelBand({active, color, children, tex, move}:{
         {get(active) && children}
         {get(active) &&
             <div>
-                <FaTrash     className="inline border bg-blue-300 p-1 hover:border-black" onClick={evt => move(+0)} size="2em"/>
-                <FaArrowUp   className="inline border bg-blue-300 p-1 hover:border-black" onClick={evt => move(-1)} size="2em"/>
-                <FaArrowDown className="inline border bg-blue-300 p-1 hover:border-black" onClick={evt => move(+1)} size="2em"/>
+                <button className="app-button app-icon-button" onClick={evt => move(+0)} aria-label="delete">
+                    <FaTrash className="app-icon" />
+                </button>
+                <button className="app-button app-icon-button" onClick={evt => move(-1)} aria-label="move-up">
+                    <FaArrowUp className="app-icon" />
+                </button>
+                <button className="app-button app-icon-button" onClick={evt => move(+1)} aria-label="move-down">
+                    <FaArrowDown className="app-icon" />
+                </button>
             </div>
         }   
     </div>

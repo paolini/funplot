@@ -142,7 +142,6 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
       var w = width;
       var h = height;
       ctx.beginPath();
-      ctx.strokeStyle = "rgb(128,128,128)";
       ctx.moveTo(0,y0); ctx.lineTo(w,y0);  // X axis
       ctx.moveTo(x0,0); ctx.lineTo(x0,h);  // Y axis
       ctx.stroke();

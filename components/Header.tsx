@@ -12,16 +12,16 @@ return <div className="block">
             <span className="block">FunPlot {VERSION}</span>
         </a>
         <button 
-            className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 rounded inline-flex items-center"
+            className="app-button"
             onClick={share}>
-            <FaShareAlt className="mt-1 mx-1 btn"/>
+            <FaShareAlt className="app-icon"/>
             <span>share</span>
         </button>
         <button 
-            className="border mx-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 rounded inline-flex items-center"
+            className="app-button"
             onClick={downloadPDF}
             >
-            <FaDownload className="mt-1 mx-1 button"/>
+            <FaDownload className="app-icon"/>
             <span>pdf</span>
         </button>
     </div>

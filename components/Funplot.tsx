@@ -51,7 +51,7 @@ export default function Funplot() {
     }
     const bifurcation = computeBifurcation()
     
-    return <main className="h-screen flex-col flex-1 bg-blue-200">
+    return <main className="app-main">
         <Header 
             share={share}
             downloadPDF={downloadPDF}
