@@ -12,22 +12,38 @@ export type Axes = {
  * underlying drawing context
  * in pixel coordinates
  */
-export interface DrawingContext {
-  clearRect(x: number, y: number, width: number, height: number): void,
-  beginPath(): void,
-  closePath(): void,
-  moveTo(x: number, y: number): void,
-  lineTo(x: number, y: number): void,
-  stroke(): void,
-  fillText(text: string, x: number, y: number): void,
-  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise: boolean): void,
-  strokeStyle: string | CanvasGradient | CanvasPattern,
-  lineWidth: number,
-  textAlign: string,
-  font: string,
+// Minimal interface covering non-standard 2D contexts (e.g. jsPDF context2d)
+interface Generic2DContext {
+  // common drawing methods
+  clearRect(x: number, y: number, w: number, h: number): void
+  beginPath(): void
+  closePath(): void
+  moveTo(x: number, y: number): void
+  lineTo(x: number, y: number): void
+  stroke(): void
+  fill(): void
+  fillText(text: string, x: number, y: number): void
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise: boolean): void
+  // save/restore used in drawAxes
+  save?(): void
+  restore?(): void
+
+  // style properties used by the code
+  strokeStyle?: any
+  fillStyle?: any
+  lineWidth?: number
+  textAlign?: string
+  font?: string
+  lineJoin?: string
+  lineCap?: string
+
+  // optional image data helpers
   getImageData?(sx: number, sy: number, sw: number, sh: number): ImageData
   putImageData?(imagedata: ImageData, dx: number, dy: number): void
 }
+
+// DrawingContext can be the browser CanvasRenderingContext2D or a compatible generic context
+export type DrawingContext = CanvasRenderingContext2D | Generic2DContext
 
 export interface AxesWrapper {
   xMin: number
@@ -143,7 +159,7 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
       var h = height;
 
       // save context state and apply high-contrast styling for axes/ticks/labels
-      ctx.save();
+      ctx.save?.();
       ctx.strokeStyle = "#787777";
       ctx.fillStyle = "#747474";
       ctx.lineWidth = 1;
@@ -227,7 +243,7 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
       }
 
       // restore previous drawing state
-      ctx.restore();
+      ctx.restore?.();
     }
   }
 
