@@ -57,15 +57,19 @@ export default function Funplot() {
     const bifurcations = useRef(new Map<string, BifurcationHandle>())
     const hasParameters = states.some(state => state.type === 'parameter')
     const [presentations, setPresentations] = useState<{
-        states: FigureState[], figures: FigurePresentation[],
+        keys: string[], states: FigureState[], figures: FigurePresentation[],
     } | null>(null)
-    const figures: PanelFigure[] = states.map(state => {
-        const index = presentations?.states.indexOf(state) ?? -1
-        return {state, ...(presentations?.figures[index] ?? {tex: '\\ldots', errors: []})}
+    const figures: PanelFigure[] = panels.map(panel => {
+        // Keep the last formula for this panel while its new state is evaluated.
+        // Object identity changes on clicks and slider moves; the panel ID does not.
+        const index = presentations?.keys?.indexOf(panel.key) ?? -1
+        return {state: panel.figure,
+            tex: presentations?.figures[index]?.tex ?? '\\ldots',
+            errors: presentations?.states[index] === panel.figure ? presentations.figures[index].errors : []}
     })
     const prepared = useCallback((states: FigureState[], figures: FigurePresentation[]) => {
-        setPresentations({states, figures})
-    }, [])
+        setPresentations({keys: panels.map(panel => panel.key), states, figures})
+    }, [panels])
     const plotError = useCallback((error: unknown) => {
         const message = `Unable to calculate plot: ${String(error)}`
         setMessages(items => [...items.filter(item => item.source !== 'plot'), {type: 'error', message, source: 'plot'}])

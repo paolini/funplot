@@ -60,10 +60,13 @@ body {
   .app-parameter-formula {
     @apply flex items-center shrink-0 overflow-x-auto overflow-y-hidden;
     width: 7.2rem;
+    height: 2rem;
+    scrollbar-width: none;
   }
 
   .app-parameter-formula .katex-display {
-    margin: 0;
+    /* KaTeX ships unlayered styles, so its display margins need an explicit override. */
+    margin: 0 !important;
     text-align: left;
   }
 
