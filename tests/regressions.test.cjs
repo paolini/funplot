@@ -441,7 +441,7 @@ test('bifurcation evaluates dependent parameters for each chosen value', () => {
         {figureIndex: 2, parameterName: 'missing', value: 3}), /no longer available/);
 });
 
-test('bifurcation ink survives slider and range changes but not a change of system', () => {
+test('bifurcation ink survives slider, range and initial-point changes but not a change of formula', () => {
     const parameter = {...newPanel('parameter').figure, name: 'c'};
     const other = {...newPanel('parameter').figure, name: 'd'};
     const recurrence = {...newPanel('recurrence').figure, start: 0.2};
@@ -449,7 +449,7 @@ test('bifurcation ink survives slider and range changes but not a change of syst
     const signature = bifurcationSignature(states, recurrence, 'c');
     assert.equal(signature, bifurcationSignature([{...parameter, expr: '3', min: -1, max: 10}, other, recurrence], recurrence, 'c'));
     assert.notEqual(signature, bifurcationSignature([parameter, {...other, expr: '3'}, recurrence], recurrence, 'c'));
-    assert.notEqual(signature, bifurcationSignature(states, {...recurrence, start: 0.3}, 'c'));
+    assert.equal(signature, bifurcationSignature(states, {...recurrence, start: 0.3}, 'c'));
     assert.notEqual(signature, bifurcationSignature(states, {...recurrence, expr: 'c*x*(1-x)'}, 'c'));
     assert.notEqual(signature, bifurcationSignature(states, recurrence, 'd'));
 });
@@ -602,4 +602,31 @@ test('real worker reports formula errors and recovers when a parameter is define
     assert.deepEqual(valid[0].figures.map(figure => figure.errors), [[], []]);
     assert.equal(valid.at(-1).type, 'picture');
     assert.ok(valid.at(-1).picture.some(element => element.type === 'line' && element.points.length > 1));
+});
+
+test('the same parameter can accumulate samples from different initial points without losing queued orbits', async () => {
+    const requests = [];
+    const pictures = [];
+    const recorder = new BifurcationRecorder({
+        compute(states, viewport, signal, prepared, sample) {
+            return new Promise(resolve => requests.push({start: states[0].start, value: sample.value, resolve}));
+        },
+        dispose() {},
+    }, picture => pictures.push(picture), error => {throw error;});
+    const first = {...newPanel('recurrence').figure, start: 0.2};
+    const second = {...first, start: 0.8};
+    const sample = {figureIndex: 0, parameterName: 'c', value: 3};
+    recorder.record([first], sample);
+    recorder.record([second], sample);
+    recorder.record([first], sample);
+    recorder.record([second], sample);
+    assert.equal(requests.length, 1);
+    requests[0].resolve([{type: 'points', color: '#f00', points: [[3, 0.2]]}]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(requests.map(({start, value}) => [start, value]), [[0.2, 3], [0.8, 3]]);
+    requests[1].resolve([{type: 'points', color: '#f00', points: [[3, 0.8]]}]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(pictures.flatMap(picture => picture[0].points), [[3, 0.2], [3, 0.8]]);
+    assert.equal(requests.length, 2);
+    recorder.clear();
 });

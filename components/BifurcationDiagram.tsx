@@ -1,4 +1,4 @@
-import {useState, useEffect, useCallback, useImperativeHandle, type Ref} from 'react'
+import {useState, useEffect, useCallback, useImperativeHandle, type Ref, type ReactNode} from 'react'
 import type {FigureState, ParameterState, RecurrenceFigureState} from '@/lib/figures'
 import type {Axes, ContextWrapper} from '@/lib/plot'
 import type {Picture} from '@/lib/picture'
@@ -22,27 +22,29 @@ export default function BifurcationDiagram({states, figureIndex, axes, choose, r
     const parameter = parameters.find(parameter => parameter.name === selected) ?? parameters[0]
     const recurrence = states[figureIndex] as RecurrenceFigureState
     return <section style={{maxWidth: '100%'}} aria-label="Bifurcation diagram">
-        <div className="flex items-center gap-2">
-            <h2>Bifurcation diagram</h2>
-            {parameters.length > 1
-                ? <select className="app-select" aria-label="Bifurcation parameter" value={parameter.name}
-                    onChange={event => setSelected(event.target.value)}>
-                    {parameters.map((parameter, i) => <option key={i} value={parameter.name}>{parameter.name}</option>)}
-                  </select>
-                : <span>({parameter.name})</span>}
-        </div>
         <RecordedDiagram key={bifurcationSignature(states, recurrence, parameter.name)}
-            ref={ref} recurrence={recurrence} parameter={parameter} axes={axes} figureIndex={figureIndex} choose={choose} />
+            ref={ref} recurrence={recurrence} parameter={parameter} axes={axes} figureIndex={figureIndex} choose={choose}>
+            <div className="flex items-center gap-2">
+                <h2>Bifurcation diagram</h2>
+                {parameters.length > 1
+                    ? <select className="app-select" aria-label="Bifurcation parameter" value={parameter.name}
+                        onChange={event => setSelected(event.target.value)}>
+                        {parameters.map((parameter, i) => <option key={i} value={parameter.name}>{parameter.name}</option>)}
+                      </select>
+                    : <span>({parameter.name})</span>}
+            </div>
+        </RecordedDiagram>
     </section>
 }
 
-function RecordedDiagram({recurrence, parameter, axes: mainAxes, figureIndex, choose, ref}: {
+function RecordedDiagram({recurrence, parameter, axes: mainAxes, figureIndex, choose, ref, children}: {
     recurrence: RecurrenceFigureState,
     parameter: ParameterState,
     axes: Axes,
     figureIndex: number,
     choose: (parameter: string, value: number) => void,
     ref: Ref<BifurcationHandle>,
+    children: ReactNode,
 }) {
     const [history, setHistory] = useState<{picture: Picture, samples: number, points: number}>(
         {picture: [], samples: 0, points: 0})
@@ -64,6 +66,9 @@ function RecordedDiagram({recurrence, parameter, axes: mainAxes, figureIndex, ch
     }, [history.picture, parameter.name])
 
     return <>
+        <BifurcationViewport key={`${parameter.min}:${parameter.max}`} parameter={parameter} mainAxes={mainAxes}
+            plot={plot} choose={choose} />
+        {children}
         <div className="flex items-center gap-2">
             <button className="app-button" onClick={() => {
                 recorder.clear()
@@ -73,8 +78,6 @@ function RecordedDiagram({recurrence, parameter, axes: mainAxes, figureIndex, ch
             }}>Clear samples</button>
             <span role="status">Samples: {history.samples} · points: {history.points}{pending ? ` · pending: ${pending}` : ''}</span>
         </div>
-        <BifurcationViewport key={`${parameter.min}:${parameter.max}`} parameter={parameter} mainAxes={mainAxes}
-            plot={plot} choose={choose} />
         <p>{Number.isFinite(recurrence.start)
             ? 'Move the slider or click here to add samples. Drag or pinch to explore.'
             : 'Choose an initial point on the cobweb diagram first.'}</p>

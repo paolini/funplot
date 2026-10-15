@@ -74,7 +74,9 @@ Slider events are queued in a separate worker so quick movements do not lose
 intermediate choices. Samples remain visible when changing the swept value,
 panning, zooming or resizing. Changing slider bounds refits the horizontal view
 without erasing samples. Choose the swept parameter with the selector if several
-parameters exist. Changing the formula, initial point, selected parameter or other
+parameters exist. Changing the initial point preserves existing samples, and the
+same parameter value can be sampled again with the new initial point. Changing
+the formula, selected parameter or other
 parameter expressions starts a fresh diagram; **Clear samples** also clears
 pending calculations. Samples are session-only and are not included in shared
 links or the main plot's PDF export.

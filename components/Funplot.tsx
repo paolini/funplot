@@ -95,17 +95,21 @@ export default function Funplot() {
             />
         <Messages messages={messages} />
         <div className="app-plots">
-            <PictureCanvas 
-                axes={axes}
-                setAxes={setAxes}
-                states={states}
-                prepared={prepared}
-                error={plotError}
-                complete={plotComplete}
-                click={click}
-                move={move}
-                resize={resize}
-                />
+            <div style={{maxWidth: '100%'}}>
+                <PictureCanvas
+                    axes={axes}
+                    setAxes={setAxes}
+                    states={states}
+                    prepared={prepared}
+                    error={plotError}
+                    complete={plotComplete}
+                    click={click}
+                    move={move}
+                    resize={resize}
+                    />
+                <p style={{contain: 'inline-size'}}>Drag to pan; pinch or scroll to zoom.
+                    {' '}Click to set initial points for ODEs and cobweb diagrams.</p>
+            </div>
             {hasParameters && panels.map((panel, index) => panel.figure.type === 'recurrence' &&
                 <BifurcationDiagram key={panel.key} states={states} figureIndex={index} axes={axes}
                     choose={chooseParameter} ref={handle => {
