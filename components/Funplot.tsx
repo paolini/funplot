@@ -33,6 +33,8 @@ export default function Funplot() {
         setHeight(h)
     }, [])
 
+    // Import browser URL state after hydration, keeping the initial server/client render identical.
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         try {
             const load = hashLoad(window.location.hash)
@@ -46,6 +48,7 @@ export default function Funplot() {
             }])
         }
     }, [setPanels, setMessages])
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const panels = get(panelsPair)
     const {figures, parameters} = useMemo(() => {

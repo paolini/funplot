@@ -33,7 +33,10 @@ Build the optimized production site with:
 npm run build
 ```
 
-then run a web server on the `out` directory.
+The build writes the static site to `out`, ready for GitHub Pages under `/funplot`.
+To preview that production build locally, run `npm start` and open
+[http://localhost:3000/funplot](http://localhost:3000/funplot). This uses a static
+server because `next start` is incompatible with static exports.
 
 ## Checks
 
@@ -66,3 +69,21 @@ their midpoint; moving both fingers also pans. A short tap still selects an
 initial point for ODEs and recurrences. Gestures beginning on the canvas are
 handled by the plot rather than by browser page zoom. Scrolling and zooming
 outside the canvas retain normal browser behavior.
+
+
+## Dependency baseline
+
+The application uses Next.js 16, React 19, Tailwind CSS 4, Math.js 15, jsPDF 4,
+and KaTeX 0.19. Build tools and type definitions are separate from browser
+runtime dependencies. ESLint runs directly using `eslint.config.mjs`; Next.js 16
+no longer provides `next lint`.
+
+`npm run export` is retained as an alias for `npm run build`. The development
+server and the production preview both use the `/funplot` base path.
+
+Run `npm audit --omit=dev` to check runtime dependencies, and `npm audit` to also
+include development tools. The `serve` dependency uses a patched `compression`
+version through a scoped override. The remaining audit advisories currently
+originate in the lint toolchain (`@next/eslint-plugin-next` → `fast-glob` →
+`micromatch` → `braces`); npm has no compatible fix without downgrading Next's
+lint configuration. Review these again when updating the lint toolchain.

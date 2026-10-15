@@ -1,33 +1,45 @@
 {
   "name": "funplot",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "export": "next export",
-    "start": "next start",
-    "lint": "next lint",
+    "export": "npm run build",
+    "start": "node scripts/preview.cjs",
+    "lint": "eslint app components lib scripts *.js *.mjs",
     "test": "node --require ./tests/register.cjs tests/regressions.test.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@matejmazur/react-katex": "^3.1.3",
-    "@types/node": "20.3.1",
-    "@types/react": "18.2.14",
-    "@types/react-dom": "18.2.6",
-    "autoprefixer": "10.4.14",
-    "eslint": "8.43.0",
-    "eslint-config-next": "13.4.7",
-    "jspdf": "^2.5.1",
-    "mathjs": "^11.8.2",
-    "next": "13.4.7",
-    "postcss": "8.4.24",
-    "react": "18.2.0",
-    "react-colorful": "^5.6.1",
-    "react-dom": "18.2.0",
-    "react-icons": "^4.10.1",
-    "tailwindcss": "3.3.2",
-    "typescript": "5.1.3"
+    "jspdf": "4.2.1",
+    "katex": "0.19.0",
+    "mathjs": "15.2.0",
+    "next": "16.4.1",
+    "react": "19.3.1",
+    "react-colorful": "5.8.1",
+    "react-dom": "19.3.1",
+    "react-icons": "5.7.0"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "^24",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "^10.12.0",
+    "eslint-config-next": "16.4.1",
+    "postcss": "8.5.30",
+    "serve": "^14",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "serve": {
+      "compression": "^1.8.2"
+    }
   }
 }

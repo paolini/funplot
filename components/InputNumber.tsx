@@ -1,4 +1,4 @@
-import {useEffect, useId, useState} from 'react'
+import {useId, useState} from 'react'
 
 import {State, get, set} from '@/lib/State'
 import {parseNumberInput} from '@/lib/numberInput'
@@ -15,15 +15,11 @@ export default function InputNumber({expr, size, right, label, validate}: {
     const [dirty, setDirty] = useState(false)
     const [submitted, setSubmitted] = useState(false)
     const errorId = useId()
-    const parsed = parseNumberInput(draft)
+    const text = dirty ? draft : String(value)
+    const parsed = parseNumberInput(text)
     const error = submitted
         ? parsed === undefined ? 'Enter a finite number.' : validate?.(parsed)
         : undefined
-
-    // External updates must not replace a draft that the user is still editing.
-    useEffect(() => {
-        if (!dirty) setDraft(String(value))
-    }, [value, dirty])
 
     function commit() {
         if (!dirty) return
@@ -48,7 +44,7 @@ export default function InputNumber({expr, size, right, label, validate}: {
             aria-label={label}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : undefined}
-            value={draft}
+            value={text}
             onChange={evt => {
                 setDraft(evt.target.value)
                 setDirty(true)

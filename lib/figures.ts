@@ -1,4 +1,4 @@
-import { compile, parse } from 'mathjs'
+import { compile, parse, type EvalFunction } from 'mathjs'
 import assert from 'assert'
 
 import {plotGraph,plotInvertedGraph} from '@/lib/plotGraph'
@@ -80,7 +80,7 @@ export interface Figure {
     click: (state: State<FigureState>, point: Coords) => void
     tex: string,
     errors: string[],
-    compiledExpr: math.EvalFunction|null
+    compiledExpr: EvalFunction|null
 }
 
 export function createFigure(state: FigureState, parameters: string[]): Figure {
@@ -100,7 +100,7 @@ export function createFigure(state: FigureState, parameters: string[]): Figure {
     }
 }
 
-function getFunX(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+function getFunX(compiledExpr: EvalFunction, parameters: PlotParameters) {
     const vars = {...parameters, x:0}
     return (x: number) => {
         vars.x = x
@@ -108,7 +108,7 @@ function getFunX(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
     }
 }
 
-function getFunY(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+function getFunY(compiledExpr: EvalFunction, parameters: PlotParameters) {
     const vars = {...parameters, y:0}
     return (y: number) => {
         vars.y = y
@@ -116,7 +116,7 @@ function getFunY(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
     }
 }
 
-function getFunXY(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+function getFunXY(compiledExpr: EvalFunction, parameters: PlotParameters) {
     const vars = {...parameters,x:0,y:0}
     return (x: number, y: number) => {
         vars.x = x
@@ -129,9 +129,9 @@ function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
     let fun: ((x:number) => number) | null = null
     let errors: string[] = []
     let tex = ''
-    let compiledExpr: math.EvalFunction | null = null
+    let compiledExpr: EvalFunction | null = null
 
-    function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+    function getFun(compiledExpr: EvalFunction, parameters: PlotParameters) {
         if (state.inverted) return getFunY(compiledExpr, parameters)
         else return getFunX(compiledExpr, parameters)
     }
@@ -174,9 +174,9 @@ function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
 function implicitFigure(state: ImplicitFigureState, parameters: string[]): Figure {
     let errors: string[] = []
     let tex = ''
-    let compiledExpr: math.EvalFunction|null = null
+    let compiledExpr: EvalFunction|null = null
 
-    function getFun(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+    function getFun(compiledExpr: EvalFunction, parameters: PlotParameters) {
         return (x: number, y:number) => compiledExpr.evaluate({...parameters, x, y})       
     }
     
@@ -215,7 +215,7 @@ function implicitFigure(state: ImplicitFigureState, parameters: string[]): Figur
 
 function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]): Figure {
     let errors: string[] = []
-    let compiledExpr: math.EvalFunction|null = null
+    let compiledExpr: EvalFunction|null = null
     let tex = ''
 
     try {
@@ -255,8 +255,8 @@ function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]):
 function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): Figure {
     let errors: string[] = []
     let tex = ''
-    let compiledExprX: math.EvalFunction|null = null
-    let compiledExprY: math.EvalFunction|null = null
+    let compiledExprX: EvalFunction|null = null
+    let compiledExprY: EvalFunction|null = null
 
     try {
         compiledExprX = compile(state.exprX)
@@ -348,7 +348,7 @@ async function odePlotHelper(ctx: AxesWrapper, state: OdeFigureStateCommon, fx: 
 function recurrenceFigure(state: RecurrenceFigureState, parameterList: string[]): Figure {
     let errors: string[] = []
     let tex = ''
-    let compiledExpr: math.EvalFunction|null = null
+    let compiledExpr: EvalFunction|null = null
 
     try {
         compiledExpr = compile(state.expr)
@@ -401,9 +401,9 @@ function recurrenceFigure(state: RecurrenceFigureState, parameterList: string[])
 function parameterFigure(state: ParameterState, parameters: string[]): Figure {
     let errors: string[] = []
     let tex = ''
-    let compiledExpr: math.EvalFunction|null = null
+    let compiledExpr: EvalFunction|null = null
 
-    function getVal(compiledExpr: math.EvalFunction, parameters: PlotParameters) {
+    function getVal(compiledExpr: EvalFunction, parameters: PlotParameters) {
         return compiledExpr.evaluate(parameters)
     }
 

@@ -40,8 +40,6 @@ export default function Canvas({axes, setAxes, plot, click, move, resize}: {
 
     useEffect(() => {
         if (!canvas) return
-        if (canvas.width !== size.width) canvas.width = size.width
-        if (canvas.height !== size.height) canvas.height = size.height
         const ctx = canvasContext(axes, canvas)
         if (ctx) return plot(ctx)
     }, [axes, canvas, plot, size])
@@ -69,6 +67,8 @@ export default function Canvas({axes, setAxes, plot, click, move, resize}: {
             className="app-canvas"
             style={{width: '100%', height: '100%', touchAction: 'none', userSelect: 'none'}}
             ref={setCanvas}
+            width={size.width}
+            height={size.height}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
