@@ -630,3 +630,88 @@ test('the same parameter can accumulate samples from different initial points wi
     assert.equal(requests.length, 2);
     recorder.clear();
 });
+
+test('shift-click ranges include both endpoints and fill columns in either direction', () => {
+    const {bifurcationRange} = require('../lib/bifurcationState.ts');
+    assert.deepEqual(bifurcationRange(1, 5, 1), [1, 2, 3, 4, 5]);
+    assert.deepEqual(bifurcationRange(5, 1, 1), [5, 4, 3, 2, 1]);
+    const uneven = bifurcationRange(0, 1, 0.3);
+    assert.equal(uneven[0], 0);
+    assert.equal(uneven.at(-1), 1);
+    assert.ok(uneven.every((value, i) => i === 0 || value - uneven[i - 1] <= 0.3));
+    assert.equal(bifurcationRange(0, 1, 0.01).length, 101);
+});
+
+test('first, repeated and extreme shift-clicks are finite and bounded', () => {
+    const {bifurcationRange} = require('../lib/bifurcationState.ts');
+    assert.deepEqual(bifurcationRange(null, 3, 1), [3]);
+    assert.deepEqual(bifurcationRange(3, 3, 1), [3]);
+    assert.deepEqual(bifurcationRange(NaN, 3, 1), [3]);
+    assert.deepEqual(bifurcationRange(1, NaN, 1), []);
+    assert.deepEqual(bifurcationRange(1, 3, 0), [3]);
+    const extreme = bifurcationRange(-1e308, 1e308, 1e-100);
+    assert.equal(extreme.length, 2001);
+    assert.ok(extreme.every(Number.isFinite));
+    assert.equal(extreme[0], -1e308);
+    assert.equal(extreme.at(-1), 1e308);
+});
+
+test('choosing a new cobweb seed samples the current parameter expression without changing it', () => {
+    const states = [
+        {...newPanel('parameter').figure, name: 'a', expr: '2'},
+        {...newPanel('parameter').figure, name: 'c', expr: 'a+1'},
+        {...newPanel('recurrence').figure, expr: 'x > 0 ? c : -c'},
+    ];
+    const sample = {figureIndex: 2, parameterName: 'c', value: null};
+    const positive = states.map((state, i) => i === 2 ? figureClick(state, {x: 0.2, y: 0}) : state);
+    const negative = states.map((state, i) => i === 2 ? figureClick(state, {x: -0.2, y: 0}) : state);
+    assert.deepEqual(calculateBifurcationSample(positive, sample)[0].points, [[3, 3]]);
+    assert.deepEqual(calculateBifurcationSample(negative, sample)[0].points, [[3, -3]]);
+    assert.equal(states[1].expr, 'a+1');
+    assert.ok(Number.isNaN(states[2].start));
+});
+
+test('current-parameter samples are queued per seed and deduplicated against numeric slider choices', async () => {
+    const jobs = [];
+    const results = [];
+    const recorder = new BifurcationRecorder({
+        compute(states, viewport, signal, prepared, sample) {
+            return new Promise(resolve => jobs.push({states, sample, resolve}));
+        },
+        dispose() {},
+    }, picture => results.push(picture), error => {throw error;});
+    const parameter = {...newPanel('parameter').figure, name: 'c', expr: '3'};
+    const recurrence = {...newPanel('recurrence').figure, start: 0.2};
+    const sample = {figureIndex: 1, parameterName: 'c', value: null};
+    recorder.record([parameter, recurrence], sample);
+    recorder.record([parameter, recurrence], {...sample, value: 3});
+    recorder.record([parameter, {...recurrence, start: 0.8}], sample);
+    assert.equal(jobs.length, 1);
+    assert.equal(jobs[0].sample.value, null);
+    jobs[0].resolve([{type: 'points', color: '#f00', points: [[3, 1]]}]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(jobs.length, 2);
+    assert.equal(jobs[1].states[1].start, 0.8);
+    jobs[1].resolve([{type: 'points', color: '#f00', points: [[3, -1]]}]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(results.length, 2);
+    recorder.clear();
+});
+
+test('real worker samples a newly chosen cobweb point at the evaluated current parameter', {timeout: 15000}, async t => {
+    const {Worker} = require('node:worker_threads');
+    const worker = new Worker(require('node:path').join(__dirname, 'plot-worker.cjs'));
+    t.after(() => worker.terminate());
+    const states = [
+        {...newPanel('parameter').figure, name: 'c', expr: '1+2'},
+        figureClick({...newPanel('recurrence').figure, expr: 'c'}, {x: 0.2, y: 0}),
+    ];
+    const response = await new Promise((resolve, reject) => {
+        worker.on('error', reject);
+        worker.on('message', resolve);
+        worker.postMessage({id: 1, states, viewport: plot,
+            sample: {figureIndex: 1, parameterName: 'c', value: null}});
+    });
+    assert.equal(response.type, 'picture');
+    assert.deepEqual(response.picture[0].points, [[3, 3]]);
+});

@@ -64,10 +64,17 @@ are present. Historical bifurcation flags in shared links remain readable.
 
 ## Bifurcation diagram
 
-Choose an initial point on the cobweb diagram, then move the parameter slider or
-click on the bifurcation diagram. A click sets the parameter to the corresponding
-horizontal coordinate and updates the cobweb. Only these explicitly selected
-values are sampled; there is no automatic sweep. Each sample discards 1,000
+Choosing an initial point on the cobweb diagram immediately adds a bifurcation
+sample at the current parameter value, retaining existing samples. The parameter
+may be a numeric expression; it is evaluated in the worker. Move the parameter
+slider or click on the bifurcation diagram to add more samples. A click there sets
+the parameter to the corresponding horizontal coordinate and updates the cobweb.
+Shift-click fills the interval from
+the last diagram click, at approximately one sample per horizontal pixel (up to
+2,000 intervals). It works in both directions and uses the current initial point.
+The first shift-click adds just one sample; **Clear samples** also resets the last
+click. Slider changes do not move this anchor. Outside shift-click, only explicitly
+selected values are sampled; there is no automatic sweep. Each sample discards 1,000
 iterations and draws up to 200 subsequent real, finite values as individual dots.
 
 Slider events are queued in a separate worker so quick movements do not lose
@@ -76,8 +83,8 @@ panning, zooming or resizing. Changing slider bounds refits the horizontal view
 without erasing samples. Choose the swept parameter with the selector if several
 parameters exist. Changing the initial point preserves existing samples, and the
 same parameter value can be sampled again with the new initial point. Changing
-the formula, selected parameter or other
-parameter expressions starts a fresh diagram; **Clear samples** also clears
+the formula, selected parameter or other parameter expressions starts a fresh
+diagram; **Clear samples** also clears
 pending calculations. Samples are session-only and are not included in shared
 links or the main plot's PDF export.
 

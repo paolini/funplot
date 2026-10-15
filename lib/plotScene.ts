@@ -3,7 +3,8 @@ import type {AxesWrapper} from './plot'
 import type {Picture} from './picture'
 import {plotBifurcation} from './plotRecurrence'
 
-export type BifurcationSample = {figureIndex: number, parameterName: string, value: number}
+// null samples the current parameter expression rather than overriding it.
+export type BifurcationSample = {figureIndex: number, parameterName: string, value: number | null}
 
 /** Only plain data crosses the worker boundary, never compiled functions or a canvas. */
 export type FigurePresentation = Pick<Figure, 'tex' | 'errors'>
@@ -55,7 +56,7 @@ export function calculateBifurcationSample(states: FigureState[], sample: Bifurc
     const names = parameterStates.map(state => state.name)
     const parameters = Object.fromEntries(names.map(name => [name, 0]))
     for (const parameter of parameterStates) {
-        const figure = createFigure(parameter.name === sample.parameterName
+        const figure = createFigure(parameter.name === sample.parameterName && sample.value !== null
             ? {...parameter, expr: String(sample.value)} : parameter, names)
         figure.eval(parameters)
         if (figure.errors.length) throw new Error(figure.errors.join('; '))
@@ -66,5 +67,5 @@ export function calculateBifurcationSample(states: FigureState[], sample: Bifurc
     return plotBifurcation(x => {
         variables.x = x
         return figure.compiledExpr!.evaluate(variables)
-    }, sample.value, state.start, state.webColor)
+    }, parameters[sample.parameterName], state.start, state.webColor)
 }

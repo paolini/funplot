@@ -6,13 +6,14 @@ import CanvasGesture from '@/lib/CanvasGesture'
 import useResizeObserver from '@/lib/useResizeObserver'
 
 type PlotFunction = (ctx: ContextWrapper) => void | (() => void)
+export type CanvasClick = {shiftKey: boolean, xStep: number}
 
 export default function Canvas({axes, setAxes, plot, click, move, resize,
     width = 640, height = 480, isometric = true, label = 'Plot'}: {
     axes: Axes,
     setAxes?: Dispatch<SetStateAction<Axes>>,
     plot: PlotFunction,
-    click?: (coords: Coords) => void,
+    click?: (coords: Coords, modifiers: CanvasClick) => void,
     move?: (coords: Coords) => void,
     resize?: (width: number, height: number) => void,
     width?: number,
@@ -122,7 +123,10 @@ export default function Canvas({axes, setAxes, plot, click, move, resize,
         }
         if (tap) {
             const ctx = canvasContext(currentAxes.current, evt.currentTarget)
-            if (ctx) click?.(ctx.mouseCoords(evt))
+            if (ctx) click?.(ctx.mouseCoords(evt), {
+                shiftKey: evt.shiftKey,
+                xStep: 2 * currentAxes.current.rx / viewport(evt.currentTarget).width,
+            })
         }
     }
 

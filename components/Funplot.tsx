@@ -151,19 +151,28 @@ export default function Funplot() {
     }
 
     function click(coords: Coords) {
-        setPanels(panels => panels.map(panel => panel.active
+        const change = (panel: IPanel): IPanel => panel.active
             ? {...panel, figure: figureClick(panel.figure, coords)}
-            : panel))
+            : panel
+        const nextStates = panels.map(panel => change(panel).figure)
+        setPanels(panels => panels.map(change))
+        for (const panel of panels) {
+            if (panel.active && panel.figure.type === 'recurrence') {
+                bifurcations.current.get(panel.key)?.sampleCurrent(nextStates)
+            }
+        }
     }
 
-    function chooseParameter(name: string, value: number) {
+    function chooseParameter(name: string, value: number, samples: number[] = [value]) {
         if (!Number.isFinite(value)) return
-        const change = (state: FigureState): FigureState => state.type === 'parameter' && state.name === name
-            ? {...state, expr: String(value), min: Math.min(state.min, value), max: Math.max(state.max, value)}
+        const change = (state: FigureState, chosen: number): FigureState => state.type === 'parameter' && state.name === name
+            ? {...state, expr: String(chosen), min: Math.min(state.min, chosen), max: Math.max(state.max, chosen)}
             : state
-        const nextStates = states.map(change)
-        setPanels(panels => panels.map(panel => ({...panel, figure: change(panel.figure)})))
-        bifurcations.current.forEach(diagram => diagram.sample(nextStates, name, value))
+        setPanels(panels => panels.map(panel => ({...panel, figure: change(panel.figure, value)})))
+        for (const chosen of samples) {
+            const sampleStates = states.map(state => change(state, chosen))
+            bifurcations.current.forEach(diagram => diagram.sample(sampleStates, name, chosen))
+        }
     }
 
 }

@@ -13,14 +13,17 @@ export default class BifurcationRecorder {
     private running = false
 
     constructor(private computer: Pick<PlotWorkerClient, 'compute' | 'dispose'>,
-        private result: (picture: Picture, value: number) => void,
+        private result: (picture: Picture, value: number | null) => void,
         private error: (error: unknown) => void,
         private pending: (count: number) => void = () => {}) {}
 
     record(states: FigureState[], sample: BifurcationSample) {
         const state = states[sample.figureIndex]
-        const key = JSON.stringify([sample.value, state?.type === 'recurrence' ? state.start : null])
-        if (!Number.isFinite(sample.value) || this.seen.has(key)) return
+        const parameter = states.find(state => state.type === 'parameter' && state.name === sample.parameterName)
+        const expression = parameter?.type === 'parameter' ? parameter.expr : ''
+        const currentValue = expression.trim() && Number.isFinite(Number(expression)) ? Number(expression) : ['expression', expression]
+        const key = JSON.stringify([sample.value ?? currentValue, state?.type === 'recurrence' ? state.start : null])
+        if ((sample.value !== null && !Number.isFinite(sample.value)) || this.seen.has(key)) return
         this.seen.add(key)
         this.queue.push({states, sample, key})
         this.pending(this.queue.length + Number(this.running))
