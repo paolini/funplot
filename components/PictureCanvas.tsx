@@ -10,7 +10,7 @@ import type {FigurePresentation} from '@/lib/plotScene'
 import {createPlotWorker} from '@/lib/createPlotWorker'
 
 /** Debounce computation and ignore results from superseded or unmounted views. */
-export default function PictureCanvas({axes, setAxes, states, prepared, error, click, move, resize}: {
+export default function PictureCanvas({axes, setAxes, states, prepared, error, complete, click, move, resize}: {
     axes: Axes,
     setAxes?: Dispatch<SetStateAction<Axes>>,
     click?: (coords: Coords) => void,
@@ -19,6 +19,7 @@ export default function PictureCanvas({axes, setAxes, states, prepared, error, c
     states: FigureState[],
     prepared: (states: FigureState[], figures: FigurePresentation[]) => void,
     error: (error: unknown) => void,
+    complete: () => void,
 }) {
     const cache = useRef<Picture|null>(null)
     const [computer] = useState(createPlotWorker)
@@ -34,6 +35,7 @@ export default function PictureCanvas({axes, setAxes, states, prepared, error, c
                 if (cancelled) return
                 cache.current = result
                 draw(ctx, result, {})
+                complete()
             } catch(reason) {
                 if (!cancelled && !(reason instanceof Error && reason.name === 'AbortError')) error(reason)
             }
@@ -43,7 +45,7 @@ export default function PictureCanvas({axes, setAxes, states, prepared, error, c
             clearTimeout(timeout)
             controller.abort()
         }
-    }, [states, computer, prepared, error])
+    }, [states, computer, prepared, error, complete])
 
     return <Canvas axes={axes} setAxes={setAxes} plot={plot}
         click={click} move={move} resize={resize} />

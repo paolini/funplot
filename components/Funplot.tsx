@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 
 import { ContextWrapper } from '@/lib/plot'
 import { get, update } from '@/lib/State'
@@ -15,6 +15,7 @@ import { hashLoad, panelToOptions, SHARE_VERSION } from '@/lib/hashConverter'
 import { IPanel, exportPdf, newPanel } from '@/lib/funplot'
 import Header from '@/components/Header'
 import PanelElements from '@/components/PanelElements'
+import BifurcationDiagram, {type BifurcationHandle} from './BifurcationDiagram'
 
 export default function Funplot() {
     const [axes, setAxes] = useState<Axes>({x: 0, y: 0, rx: 4, ry: 3})
@@ -53,6 +54,8 @@ export default function Funplot() {
 
     const panels = get(panelsPair)
     const states = useMemo(() => panels.map(panel => panel.figure), [panels])
+    const bifurcations = useRef(new Map<string, BifurcationHandle>())
+    const hasParameters = states.some(state => state.type === 'parameter')
     const [presentations, setPresentations] = useState<{
         states: FigureState[], figures: FigurePresentation[],
     } | null>(null)
@@ -65,7 +68,11 @@ export default function Funplot() {
     }, [])
     const plotError = useCallback((error: unknown) => {
         const message = `Unable to calculate plot: ${String(error)}`
-        setMessages(items => items.some(item => item.message === message) ? items : [...items, {type: 'error', message}])
+        setMessages(items => [...items.filter(item => item.source !== 'plot'), {type: 'error', message, source: 'plot'}])
+    }, [setMessages])
+    const plotComplete = useCallback(() => {
+        setMessages(items => items.some(item => item.source === 'plot' || item.message.startsWith('Unable to calculate plot:'))
+            ? items.filter(item => item.source !== 'plot' && !item.message.startsWith('Unable to calculate plot:')) : items)
     }, [setMessages])
 
     const pdfComputer = usePlotComputer()
@@ -80,20 +87,27 @@ export default function Funplot() {
             panelsPair={panelsPair} 
             figures={figures} 
             cursor={cursor}
+            chooseParameter={chooseParameter}
             />
         <Messages messages={messages} />
-        <div>
+        <div className="app-plots">
             <PictureCanvas 
                 axes={axes}
                 setAxes={setAxes}
                 states={states}
                 prepared={prepared}
                 error={plotError}
+                complete={plotComplete}
                 click={click}
                 move={move}
                 resize={resize}
                 />
-
+            {hasParameters && panels.map((panel, index) => panel.figure.type === 'recurrence' &&
+                <BifurcationDiagram key={panel.key} states={states} figureIndex={index} axes={axes}
+                    choose={chooseParameter} ref={handle => {
+                        if (handle) bifurcations.current.set(panel.key, handle)
+                        else bifurcations.current.delete(panel.key)
+                    }} />)}
         </div>
     </main>
 
@@ -132,6 +146,16 @@ export default function Funplot() {
         setPanels(panels => panels.map(panel => panel.active
             ? {...panel, figure: figureClick(panel.figure, coords)}
             : panel))
+    }
+
+    function chooseParameter(name: string, value: number) {
+        if (!Number.isFinite(value)) return
+        const change = (state: FigureState): FigureState => state.type === 'parameter' && state.name === name
+            ? {...state, expr: String(value), min: Math.min(state.min, value), max: Math.max(state.max, value)}
+            : state
+        const nextStates = states.map(change)
+        setPanels(panels => panels.map(panel => ({...panel, figure: change(panel.figure)})))
+        bifurcations.current.forEach(diagram => diagram.sample(nextStates, name, value))
     }
 
 }

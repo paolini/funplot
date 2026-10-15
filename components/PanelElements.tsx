@@ -12,10 +12,11 @@ import { ParameterPanel } from './ParameterPanel'
 import { IPanel, extractFigurePairFromPanels, newPanel } from '@/lib/funplot'
 import Coords from '@/lib/Coords'
 
-export default function PanelElements({panelsPair, figures, cursor}:{
+export default function PanelElements({panelsPair, figures, cursor, chooseParameter}:{
     panelsPair: State<IPanel[]>,
     figures: PanelFigure[],
     cursor?: Coords,
+    chooseParameter: (name: string, value: number) => void,
 }) {
     const panels = get(panelsPair)
     assert(panels.length === figures.length)
@@ -78,6 +79,7 @@ export default function PanelElements({panelsPair, figures, cursor}:{
                 />
             case 'parameter':
                 return <ParameterPanel key={panel.key} state={extractFigurePairFromPanels<ParameterState>(panelsPair, panel)}
+                    chooseParameter={chooseParameter}
                     figure={figures[i]}
                     active={active}
                     move={move}

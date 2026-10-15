@@ -37,8 +37,15 @@ body {
 
 @layer components {
   .app-main {
-    @apply h-screen flex-col flex-1;
+    @apply min-h-screen flex-col flex-1;
     background-color: var(--main-bg);
+  }
+
+  .app-plots {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem;
   }
 
   .app-input {

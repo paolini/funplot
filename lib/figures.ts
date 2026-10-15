@@ -1,4 +1,4 @@
-import { compile, parse, type EvalFunction } from 'mathjs'
+import { compile, parse, isComplex, type EvalFunction } from 'mathjs'
 
 import {plotGraph,plotInvertedGraph} from '@/lib/plotGraph'
 import levelPlot from './plotLevels'
@@ -100,11 +100,20 @@ export function createFigure(state: FigureState, parameters: string[]): Figure {
     }
 }
 
+function realPlotValue(value: unknown): number {
+    if (typeof value === 'number') return value
+    // Keep real-domain plots such as sqrt(x) drawable on their valid intervals.
+    if (isComplex(value)) return value.im === 0 ? value.re : NaN
+    throw new Error(typeof value === 'function'
+        ? 'The formula returns a function. Supply its arguments, for example sin(x), not sin.'
+        : 'The formula must return a real number.')
+}
+
 function getFunX(compiledExpr: EvalFunction, parameters: PlotParameters) {
     const vars = {...parameters, x:0}
     return (x: number) => {
         vars.x = x
-        return compiledExpr.evaluate(vars)
+        return realPlotValue(compiledExpr.evaluate(vars))
     }
 }
 
@@ -112,7 +121,7 @@ function getFunY(compiledExpr: EvalFunction, parameters: PlotParameters) {
     const vars = {...parameters, y:0}
     return (y: number) => {
         vars.y = y
-        return compiledExpr.evaluate(vars)
+        return realPlotValue(compiledExpr.evaluate(vars))
     }
 }
 
@@ -121,7 +130,7 @@ function getFunXY(compiledExpr: EvalFunction, parameters: PlotParameters) {
     return (x: number, y: number) => {
         vars.x = x
         vars.y = y
-        return compiledExpr.evaluate(vars)
+        return realPlotValue(compiledExpr.evaluate(vars))
     }
 }
 
@@ -142,6 +151,7 @@ function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
         fun(0) // check if it is working
     } catch(e) {
         fun = null
+        compiledExpr = null
         errors.push(`graph ${e}`)
     }
     try {
@@ -158,7 +168,7 @@ function graphFigure(state: GraphFigureState, parameters: string[]): Figure {
             if (state.inverted) return plotInvertedGraph(axes, fun, state.color)
             else return plotGraph(axes, fun, state.color)
         } catch(e) {
-            console.error(e)
+            errors.push(String(e))
             return []
         }    
     }
@@ -177,7 +187,7 @@ function implicitFigure(state: ImplicitFigureState, parameters: string[]): Figur
     let compiledExpr: EvalFunction|null = null
 
     function getFun(compiledExpr: EvalFunction, parameters: PlotParameters) {
-        return (x: number, y:number) => compiledExpr.evaluate({...parameters, x, y})       
+        return (x: number, y:number) => realPlotValue(compiledExpr.evaluate({...parameters, x, y}))
     }
     
     try {
@@ -201,7 +211,7 @@ function implicitFigure(state: ImplicitFigureState, parameters: string[]): Figur
             const fun = getFun(compiledExpr, parameters)
             return levelPlot(axes, fun, state.color)
         } catch(e) {
-            console.error(e)
+            errors.push(String(e))
             return []
         }    
     }
@@ -375,7 +385,7 @@ function recurrenceFigure(state: RecurrenceFigureState, parameterList: string[])
                 ...plotGraph(axes, x=>x, "#AAAAAA"),
             ]
         } catch(e) {
-            console.error(e)
+            errors.push(String(e))
             return []
         }    
     }

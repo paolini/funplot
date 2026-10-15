@@ -397,3 +397,209 @@ test('UI clicks still add initial points and recurrence starts without evaluatin
     const graph = {...newPanel('graph').figure, expr: 'not a valid formula'};
     assert.strictEqual(figureClick(graph, point), graph);
 });
+
+const {plotBifurcation} = require('../lib/plotRecurrence.ts');
+const {calculateBifurcationSample} = require('../lib/plotScene.ts');
+const {bifurcationSignature} = require('../lib/bifurcationState.ts');
+const BifurcationRecorder = require('../lib/BifurcationRecorder.ts').default;
+
+test('bifurcation samples only the selected parameter and discards the transient', () => {
+    const picture = plotBifurcation(x => x / 2, 3.5, 1, '#123', 10, 3);
+    assert.deepEqual(picture, [{type: 'points', color: '#123', points: [
+        [3.5, 2 ** -11], [3.5, 2 ** -12], [3.5, 2 ** -13],
+    ]}]);
+    const fixed = plotBifurcation(x => 2 * x * (1 - x), 2, 0.2, '#f00')[0].points;
+    assert.equal(fixed.length, 1);
+    assert.ok(Math.abs(fixed[0][1] - 0.5) < 1e-12);
+    const cycle = plotBifurcation(x => 3.2 * x * (1 - x), 3.2, 0.2, '#f00')[0].points;
+    const values = [...new Set(cycle.map(point => point[1].toFixed(10)))];
+    assert.equal(values.length, 2);
+    assert.ok(cycle.every(([c]) => c === 3.2));
+    const chaotic = plotBifurcation(x => 4 * x * (1 - x), 4, 0.2, '#f00')[0].points;
+    assert.ok(chaotic.length > 100);
+    assert.ok(chaotic.every(([c, x]) => c === 4 && x >= 0 && x <= 1));
+});
+
+test('bifurcation does not record non-real or divergent orbits or invent an initial point', () => {
+    assert.deepEqual(plotBifurcation(x => x * x, 1, 2, '#f00'), []);
+    assert.deepEqual(plotBifurcation(() => ({re: 1, im: 1}), 1, 0, '#f00'), []);
+    assert.deepEqual(plotBifurcation(x => x, 1, NaN, '#f00'), []);
+    assert.throws(() => calculateBifurcationSample([newPanel('recurrence').figure],
+        {figureIndex: 0, parameterName: 'c', value: 2}), /initial point/);
+});
+
+test('bifurcation evaluates dependent parameters for each chosen value', () => {
+    const states = [
+        {...newPanel('parameter').figure, name: 'c', expr: '1'},
+        {...newPanel('parameter').figure, name: 'd', expr: 'c+2'},
+        {...newPanel('recurrence').figure, start: 0.2, expr: 'd'},
+    ];
+    const picture = calculateBifurcationSample(states, {figureIndex: 2, parameterName: 'c', value: 3});
+    assert.deepEqual(picture[0].points, [[3, 5]]);
+    assert.equal(states[0].expr, '1');
+    assert.throws(() => calculateBifurcationSample(states,
+        {figureIndex: 2, parameterName: 'missing', value: 3}), /no longer available/);
+});
+
+test('bifurcation ink survives slider and range changes but not a change of system', () => {
+    const parameter = {...newPanel('parameter').figure, name: 'c'};
+    const other = {...newPanel('parameter').figure, name: 'd'};
+    const recurrence = {...newPanel('recurrence').figure, start: 0.2};
+    const states = [parameter, other, recurrence];
+    const signature = bifurcationSignature(states, recurrence, 'c');
+    assert.equal(signature, bifurcationSignature([{...parameter, expr: '3', min: -1, max: 10}, other, recurrence], recurrence, 'c'));
+    assert.notEqual(signature, bifurcationSignature([parameter, {...other, expr: '3'}, recurrence], recurrence, 'c'));
+    assert.notEqual(signature, bifurcationSignature(states, {...recurrence, start: 0.3}, 'c'));
+    assert.notEqual(signature, bifurcationSignature(states, {...recurrence, expr: 'c*x*(1-x)'}, 'c'));
+    assert.notEqual(signature, bifurcationSignature(states, recurrence, 'd'));
+});
+
+test('rapid slider choices are queued without gaps, deduplicated, and never auto-swept', async () => {
+    const requests = [];
+    const results = [];
+    const computer = {
+        compute(states, viewport, signal, prepared, sample) {
+            return new Promise(resolve => requests.push({sample, resolve}));
+        },
+        dispose() {},
+    };
+    const recorder = new BifurcationRecorder(computer, (picture, value) => results.push(value), error => {throw error;});
+    const sample = value => recorder.record([], {figureIndex: 0, parameterName: 'c', value});
+    sample(2);
+    sample(3.2);
+    sample(3.8);
+    sample(2);
+    assert.equal(requests.length, 1);
+    requests[0].resolve([]);
+    await new Promise(resolve => setImmediate(resolve));
+    requests[1].resolve([]);
+    await new Promise(resolve => setImmediate(resolve));
+    requests[2].resolve([]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(requests.map(request => request.sample.value), [2, 3.2, 3.8]);
+    assert.deepEqual(results, [2, 3.2, 3.8]);
+    recorder.clear();
+});
+
+test('clearing bifurcation cancels pending ink and allows choosing the same value again', async () => {
+    const requests = [];
+    const results = [];
+    let disposed = 0;
+    const recorder = new BifurcationRecorder({
+        compute() {return new Promise(resolve => requests.push(resolve));},
+        dispose() {disposed++;},
+    }, (picture, value) => results.push(value), error => {throw error;});
+    const sample = value => recorder.record([], {figureIndex: 0, parameterName: 'c', value});
+    sample(2);
+    sample(3);
+    recorder.clear();
+    sample(2);
+    requests[0]([]); // A late result must not redraw cleared data.
+    requests[1]([]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(results, [2]);
+    assert.equal(requests.length, 2);
+    assert.equal(disposed, 1);
+    recorder.clear();
+});
+
+test('real worker handles isolated bifurcation samples without a parameter sweep', {timeout: 15000}, async t => {
+    const {Worker} = require('node:worker_threads');
+    const worker = new Worker(require('node:path').join(__dirname, 'plot-worker.cjs'));
+    t.after(() => worker.terminate());
+    const states = [
+        {...newPanel('parameter').figure, name: 'c', expr: '1'},
+        {...newPanel('recurrence').figure, expr: 'c*x*(1-x)', start: 0.2},
+    ];
+    const response = await new Promise((resolve, reject) => {
+        worker.on('error', reject);
+        worker.on('message', resolve);
+        worker.postMessage({id: 1, states, viewport: plot,
+            sample: {figureIndex: 1, parameterName: 'c', value: 2}});
+    });
+    assert.equal(response.type, 'picture');
+    assert.equal(response.picture[0].points.length, 1);
+    assert.equal(response.picture[0].points[0][0], 2);
+    assert.ok(Math.abs(response.picture[0].points[0][1] - 0.5) < 1e-12);
+});
+
+test('point pictures draw separate dots and clip points outside the visible axes', () => {
+    const {draw} = require('../lib/funplot.ts');
+    const {context} = require('../lib/plot.ts');
+    const arcs = [];
+    let fills = 0;
+    const ctx = {clearRect() {}, beginPath() {}, arc(...args) {arcs.push(args);}, fill() {fills++;}};
+    draw(context(axes, 640, 480, ctx), [{type: 'points', color: '#f00', points: [[0, 0], [1, 1], [10, 10]]}], {});
+    assert.equal(fills, 2);
+    assert.deepEqual(arcs.map(arc => arc.slice(0, 2)), [[320, 240], [400, 160]]);
+    assert.equal(ctx.fillStyle, '#f00');
+});
+
+test('formulas returning functions cannot enter any plot geometry or worker messages', async () => {
+    for (const type of ['graph', 'graph_inverted', 'implicit', 'ode', 'system', 'recurrence']) {
+        const state = {...newPanel(type).figure, expr: 'sin', exprX: 'sin', start: 0.2};
+        let metadata;
+        const picture = await calculateScene([state], plot, figures => {metadata = figures;});
+        assert.ok(metadata[0].errors.some(error => error.includes('Supply its arguments')), type);
+        assert.doesNotThrow(() => structuredClone({metadata, picture}), type);
+        assert.deepEqual(picture, [{type: 'axes', options: {labels: {x: 'x', y: 'y'}}}]);
+    }
+});
+
+test('cobwebs without a seed or with divergent or non-numeric iterates contain no invalid coordinates', () => {
+    const {plotRecurrence} = require('../lib/plotRecurrence.ts');
+    assert.deepEqual(plotRecurrence(plot, x => x, NaN, '#f00'), []);
+    for (const fun of [() => Infinity, () => Math.sin, x => x * x]) {
+        const picture = plotRecurrence(plot, fun, 2, '#f00');
+        assert.doesNotThrow(() => structuredClone(picture));
+        assert.ok(picture.every(line => line.points.every(point => point.every(Number.isFinite))));
+    }
+});
+
+test('real-domain formulas retain their graph when complex values occur outside their domain', async () => {
+    const graph = createFigure({...newPanel('graph').figure, expr: 'sqrt(x)'}, []);
+    const picture = await graph.plot(plot, {});
+    assert.deepEqual(graph.errors, []);
+    assert.ok(picture.some(line => line.type === 'line' && line.points.length > 1));
+    assert.ok(picture.every(line => line.points.every(point => point.every(Number.isFinite))));
+});
+
+test('real worker reports formula errors and recovers when a parameter is defined', {timeout: 15000}, async t => {
+    const {Worker} = require('node:worker_threads');
+    const worker = new Worker(require('node:path').join(__dirname, 'plot-worker.cjs'));
+    t.after(() => worker.terminate());
+    let id = 0;
+    async function request(expr, withParameter = true) {
+        const requestId = ++id;
+        const states = [{...newPanel('recurrence').figure, expr}];
+        if (withParameter) states.push({...newPanel('parameter').figure, name: 'c', expr: '1'});
+        return new Promise((resolve, reject) => {
+            const messages = [];
+            const onError = error => {cleanup(); reject(error);};
+            const onMessage = message => {
+                if (message.id !== requestId) return;
+                messages.push(message);
+                if (message.type === 'error') onError(new Error(message.message));
+                if (message.type === 'picture') {cleanup(); resolve(messages);}
+            };
+            const cleanup = () => {
+                worker.off('error', onError);
+                worker.off('message', onMessage);
+            };
+            worker.on('error', onError);
+            worker.on('message', onMessage);
+            worker.postMessage({id: requestId, states, viewport: plot});
+        });
+    }
+    const missing = await request('c*(1-x^2)', false);
+    assert.ok(missing[0].figures[0].errors.some(error => error.includes('Undefined symbol c')));
+    const functionValue = await request('sin');
+    assert.ok(functionValue[0].figures[0].errors.some(error => error.includes('Supply its arguments')));
+    const lateError = await request('x == 0 ? 0 : sin');
+    assert.equal(lateError.filter(message => message.type === 'prepared').length, 2);
+    assert.ok(lateError.at(-2).figures[0].errors.some(error => error.includes('Supply its arguments')));
+    const valid = await request('c*(1-x^2)'); // Same panel order and missing seed as the user's screenshot.
+    assert.deepEqual(valid[0].figures.map(figure => figure.errors), [[], []]);
+    assert.equal(valid.at(-1).type, 'picture');
+    assert.ok(valid.at(-1).picture.some(element => element.type === 'line' && element.points.length > 1));
+});

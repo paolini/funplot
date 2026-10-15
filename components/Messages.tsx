@@ -3,6 +3,7 @@ import { State, get, map, remove } from '@/lib/State'
 export interface IMessage {
     type: 'info' | 'error' | 'warning',
     message: string,
+    source?: 'plot',
 }
 
 export default function Messages({messages}: {

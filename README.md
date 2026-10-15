@@ -59,8 +59,25 @@ The configured base path is `/funplot`.
 
 Shared links carry a format version and retain support for historical unversioned
 links. Invalid links show an error without replacing the current plot. The
-unfinished bifurcation diagram is temporarily unavailable; its saved setting is
-preserved when opening and sharing existing plots.
+bifurcation diagram appears beside the main plot when a recurrence and a parameter
+are present. Historical bifurcation flags in shared links remain readable.
+
+## Bifurcation diagram
+
+Choose an initial point on the cobweb diagram, then move the parameter slider or
+click on the bifurcation diagram. A click sets the parameter to the corresponding
+horizontal coordinate and updates the cobweb. Only these explicitly selected
+values are sampled; there is no automatic sweep. Each sample discards 1,000
+iterations and draws up to 200 subsequent real, finite values as individual dots.
+
+Slider events are queued in a separate worker so quick movements do not lose
+intermediate choices. Samples remain visible when changing the swept value,
+panning, zooming or resizing. Changing slider bounds refits the horizontal view
+without erasing samples. Choose the swept parameter with the selector if several
+parameters exist. Changing the formula, initial point, selected parameter or other
+parameter expressions starts a fresh diagram; **Clear samples** also clears
+pending calculations. Samples are session-only and are not included in shared
+links or the main plot's PDF export.
 
 ## Canvas gestures
 

@@ -1,17 +1,18 @@
 import type {PanelFigure} from '@/lib/plotScene'
-import { get, getField, State, onChange } from '@/lib/State'
+import { get, getField, State } from '@/lib/State'
 import { FigureState, ParameterState } from '@/lib/figures'
 import PanelBand from './PanelBand'
 import Input from './Input'
 import InputNumber from './InputNumber'
 import Errors from './Errors'
 
-export function ParameterPanel({state, figure, active, move}: 
+export function ParameterPanel({state, figure, active, move, chooseParameter}:
     {
         state: State<ParameterState>,
         figure: PanelFigure,
         active: State<boolean>,
         move: (f: FigureState, n: number) => void,
+        chooseParameter: (name: string, value: number) => void,
     }) {
     const expr: State<string> = getField(state, 'expr')
     const name: State<string> = getField(state, 'name')
@@ -33,12 +34,13 @@ export function ParameterPanel({state, figure, active, move}:
                 validate={value => value < get(max) ? undefined : 'Minimum must be less than maximum.'} />
             <input 
                 type="range" 
+                aria-label={`Parameter ${get(name)}`}
                 className="slider" 
                 value={get(expr)} 
                 min={get(min)}
                 max={get(max)}
                 step={0.00001*(get(max)-get(min))}
-                onChange={onChange(expr)}
+                onChange={event => chooseParameter(get(name), event.currentTarget.valueAsNumber)}
             />
             <InputNumber expr={max} size={6} label="Maximum"
                 validate={value => value > get(min) ? undefined : 'Maximum must be greater than minimum.'} />

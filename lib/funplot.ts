@@ -102,6 +102,16 @@ function plotPicture(plot: ContextWrapper, picture: Picture) {
 
     picture.forEach(elem => {
         switch(elem.type) {
+            case "points": {
+                plot.ctx.fillStyle = elem.color
+                for (const [x, y] of elem.points) {
+                    if (x < plot.xMin || x > plot.xMax || y < plot.yMin || y > plot.yMax) continue
+                    plot.ctx.beginPath()
+                    plot.ctx.arc(plot.pixel_x(x), plot.pixel_y(y), 1.2, 0, 2 * Math.PI, false)
+                    plot.ctx.fill()
+                }
+            }
+            break
             case "axes": {
                 plot.drawAxes(elem.options)
             }

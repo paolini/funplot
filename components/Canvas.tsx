@@ -7,16 +7,21 @@ import useResizeObserver from '@/lib/useResizeObserver'
 
 type PlotFunction = (ctx: ContextWrapper) => void | (() => void)
 
-export default function Canvas({axes, setAxes, plot, click, move, resize}: {
+export default function Canvas({axes, setAxes, plot, click, move, resize,
+    width = 640, height = 480, isometric = true, label = 'Plot'}: {
     axes: Axes,
     setAxes?: Dispatch<SetStateAction<Axes>>,
     plot: PlotFunction,
     click?: (coords: Coords) => void,
     move?: (coords: Coords) => void,
     resize?: (width: number, height: number) => void,
+    width?: number,
+    height?: number,
+    isometric?: boolean,
+    label?: string,
 }) {
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
-    const [size, setSize] = useState({width: 640, height: 480})
+    const [size, setSize] = useState({width, height})
     const gesture = useRef(new CanvasGesture())
     const currentAxes = useRef(axes)
     useLayoutEffect(() => {currentAxes.current = axes}, [axes])
@@ -27,7 +32,7 @@ export default function Canvas({axes, setAxes, plot, click, move, resize}: {
         if (width <= 0 || height <= 0) return
         setSize(old => old.width === width && old.height === height ? old : {width, height})
         resize?.(width, height)
-        setAxes?.(current => {
+        if (isometric) setAxes?.(current => {
             const scale = Math.hypot(current.rx, current.ry) / Math.hypot(width, height)
             const rx = width * scale
             const ry = height * scale
@@ -35,7 +40,7 @@ export default function Canvas({axes, setAxes, plot, click, move, resize}: {
                 Math.abs(ry - current.ry) < 1e-12 * current.ry) return current
             return {...current, rx, ry}
         })
-    }, [resize, setAxes])
+    }, [resize, setAxes, isometric])
     const resizeRef = useResizeObserver(onResize)
 
     useEffect(() => {
@@ -62,8 +67,9 @@ export default function Canvas({axes, setAxes, plot, click, move, resize}: {
         return () => canvas.removeEventListener('wheel', wheel)
     }, [canvas, setAxes])
 
-    return <div ref={resizeRef} style={{resize: 'both', overflow: 'auto', width: '640px', height: '480px'}}>
+    return <div ref={resizeRef} style={{resize: 'both', overflow: 'auto', width, height, maxWidth: '100%'}}>
         <canvas
+            aria-label={label}
             className="app-canvas"
             style={{width: '100%', height: '100%', touchAction: 'none', userSelect: 'none'}}
             ref={setCanvas}

@@ -1,7 +1,7 @@
 import type {FigureState} from './figures'
 import type {AxesWrapper} from './plot'
 import type {Picture} from './picture'
-import type {FigurePresentation, PlotRequest, PlotResponse} from './plotScene'
+import type {BifurcationSample, FigurePresentation, PlotRequest, PlotResponse} from './plotScene'
 
 export interface PlotWorker {
     onmessage: ((event: MessageEvent<PlotResponse>) => void) | null
@@ -20,7 +20,7 @@ export default class PlotWorkerClient {
     constructor(private createWorker: () => PlotWorker) {}
 
     compute(states: FigureState[], viewport: AxesWrapper, signal?: AbortSignal,
-        prepared?: (figures: FigurePresentation[]) => void): Promise<Picture> {
+        prepared?: (figures: FigurePresentation[]) => void, sample?: BifurcationSample): Promise<Picture> {
         if (signal?.aborted) return Promise.reject(new DOMException('Calculation cancelled', 'AbortError'))
         this.cancel()
         return new Promise((resolve, reject) => {
@@ -57,7 +57,9 @@ export default class PlotWorkerClient {
                     if (this.pending?.id === id) fail(new Error('Unable to read plot worker result'))
                 }
                 const {xMin, xMax, yMin, yMax, width, height, radius} = viewport
-                worker.postMessage({id, states, viewport: {xMin, xMax, yMin, yMax, width, height, radius}})
+                const request: PlotRequest = {id, states, viewport: {xMin, xMax, yMin, yMax, width, height, radius}}
+                if (sample) request.sample = sample
+                worker.postMessage(request)
             } catch (error) {
                 fail(error instanceof Error ? error : new Error(String(error)))
             }
