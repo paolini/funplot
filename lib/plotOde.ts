@@ -19,7 +19,9 @@ export function slopeGraph(plot: AxesWrapper, fx: Fun2, fy: Fun2, draw_arrows: b
       for (var y=ymin + 0.5*gridy; y < ymax; y+=gridy) {
           var dx = fx(x, y);
           var dy = fy(x, y);
-          var s = h/Math.sqrt(dx*dx + dy*dy);
+          const speed = Math.hypot(dx, dy)
+          if (!Number.isFinite(speed) || speed === 0) continue
+          var s = h/speed;
           segments.push([[x,y],[s*dx,s*dy]])
       }
     }
@@ -54,19 +56,20 @@ export function odePlot(plot: AxesWrapper, fx: Fun2, fy: Fun2, x0: number, y0: n
     
     const points: Point[] = []
     for (let dir=-1;dir<=1;dir+=2) {
-      const maxstep = plot.width*10
+      const maxstep = Math.min(100000, Math.ceil(Math.hypot(plot.width, plot.height) * 10))
       let x = x0
       let y = y0
 
       if (dir>0) points.push([x,y])
 
-      for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && (step < maxstep || equation); step++) {
+      for (var step=0;x<=xmax && x>=xmin && y<=ymax && y>=ymin && step < maxstep; step++) {
         const dx0 = fx(x, y)
         const dy0 = fy(x, y)
 
-        if (isNaN(dx0) || isNaN(dy0)) break
+        if (!Number.isFinite(dx0) || !Number.isFinite(dy0)) break
 
-        const v0 = Math.sqrt(sqr(dx0) + sqr(dy0))
+        const v0 = Math.hypot(dx0, dy0)
+        if (!Number.isFinite(v0) || v0 === 0 || !Number.isFinite(dt) || dt <= 0) break
         const l0 = dt / v0
 
 //        if (l>1.1) break
@@ -76,12 +79,13 @@ export function odePlot(plot: AxesWrapper, fx: Fun2, fy: Fun2, x0: number, y0: n
         const dx1 = fx(xx,yy)
         const dy1 = fy(xx,yy)
 
-        if (isNaN(dx1) || isNaN(dy1)) break
+        if (!Number.isFinite(dx1) || !Number.isFinite(dy1)) break
 
-        const dx = 0.5 * (dx0 + dx1)
-        const dy = 0.5 * (dy0 + dy1)
+        const dx = 0.5 * dx0 + 0.5 * dx1
+        const dy = 0.5 * dy0 + 0.5 * dy1
 
-        const v = Math.sqrt(sqr(dx) + sqr(dy))
+        const v = Math.hypot(dx, dy)
+        if (!Number.isFinite(v) || v === 0) break
         const l = dt / v
 
         // useful with equations like y'=1/cos(y)
@@ -93,8 +97,12 @@ export function odePlot(plot: AxesWrapper, fx: Fun2, fy: Fun2, x0: number, y0: n
         // detect stationary points
         if (!equation && v<2*dt) break
   
-        x += dir * l * dx;
-        y += dir * l * dy;
+        const nextX = x + dir * l * dx
+        const nextY = y + dir * l * dy
+        if (!Number.isFinite(nextX) || !Number.isFinite(nextY)) break
+        if (nextX === x && nextY === y) break
+        x = nextX
+        y = nextY
 
         if (!equation && points.length>10 && sqr(x-points[0][0])+sqr(y-points[0][1])<sqr(2*dt)) {
           // curve has closed

@@ -15,7 +15,12 @@ const nextConfig = {
 nextConfig.basePath = '/funplot'
 nextConfig.assetPrefix = '/funplot'
 
-console.log(BANNER)
+// Next passes the actual listening port to its development workers, including
+// when it falls back to another port because the default one is occupied.
+if (process.env.NODE_ENV === 'development' && process.env.PORT) {
+    console.log(BANNER)
+    console.log(`Apri FunPlot: http://localhost:${process.env.PORT}${nextConfig.basePath}\n`)
+}
 module.exports = nextConfig
 
 

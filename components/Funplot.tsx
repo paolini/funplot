@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import assert from 'assert'
 
 import { ContextWrapper } from '@/lib/plot'
@@ -10,17 +10,17 @@ import { FigureState, ParameterState, createFigure } from '@/lib/figures'
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
 import { Picture } from '@/lib/picture'
-import { hashLoad, panelToOptions } from '@/lib/hashConverter'
-import { BANNER } from '@/app/info'
+import { hashLoad, panelToOptions, SHARE_VERSION } from '@/lib/hashConverter'
 import { IPanel, exportPdf, newPanel } from '@/lib/funplot'
 import Header from '@/components/Header'
 import PanelElements from '@/components/PanelElements'
-import {plotBifurcation} from '@/lib/plotRecurrence'
 
 export default function Funplot() {
     const [axes, setAxes] = useState<Axes>({x: 0, y: 0, rx: 4, ry: 3})
     const panelsPair = useState<IPanel[]>([])
     const messages = useState<IMessage[]>([])
+    const [, setPanels] = panelsPair
+    const [, setMessages] = messages
     const [cursor,setCursor] = useState<Coords>({x:0, y:0})
     const [width, setWidth] = useState(0)
     const [height, setHeight] = useState(0)
@@ -28,28 +28,42 @@ export default function Funplot() {
         setCursor(coords)
     },[setCursor])
 
-    // console.log("Funplot")
-
-    useEffect(() => {
-        /* load data from url */
-        console.log("loadFromHash")
-        const load = hashLoad(window.location.hash)
-        if (!load) return
-        setAxes(load.axes)
-        set(panelsPair, load.figures.map(newPanel))
-        console.log(BANNER)
+    const resize = useCallback((w: number, h: number) => {
+        setWidth(w)
+        setHeight(h)
     }, [])
 
-    const parameterList: string[] = get(panelsPair)
-        .map(panel => panel.figure)
-        .filter((figure: FigureState): figure is ParameterState => figure.type === 'parameter')
-        .map(f => f.name)
-    const figures = get(panelsPair).map(p => createFigure(p.figure, parameterList))
-    const parameters = Object.fromEntries(parameterList.map(p => [p,0]))
-    for(const figure of figures) {
-        figure.eval(parameters)
-    }
-    const bifurcation = computeBifurcation()
+    useEffect(() => {
+        try {
+            const load = hashLoad(window.location.hash)
+            if (!load) return
+            setAxes(load.axes)
+            setPanels(load.figures.map(newPanel))
+        } catch {
+            setMessages(items => [...items, {
+                type: 'error',
+                message: 'Unable to open this shared plot: the link is invalid or unsupported.',
+            }])
+        }
+    }, [setPanels, setMessages])
+
+    const panels = get(panelsPair)
+    const {figures, parameters} = useMemo(() => {
+        const parameterList = panels
+            .map(panel => panel.figure)
+            .filter((figure): figure is ParameterState => figure.type === 'parameter')
+            .map(figure => figure.name)
+        const figures = panels.map(panel => createFigure(panel.figure, parameterList))
+        const parameters = Object.fromEntries(parameterList.map(name => [name, 0]))
+        for (const figure of figures) figure.eval(parameters)
+        return {figures, parameters}
+    }, [panels])
+
+    const picture = useCallback(async (ctx: ContextWrapper): Promise<Picture> => {
+        let result: Picture = [{type: 'axes', options: {labels: {x: 'x', y: 'y'}}}]
+        for (const figure of figures) result = result.concat(await figure.plot(ctx, parameters))
+        return result
+    }, [figures, parameters])
     
     return <main className="app-main">
         <Header 
@@ -71,23 +85,14 @@ export default function Funplot() {
                 move={move}
                 resize={resize}
                 />
-            { bifurcation.enabled && bifurcation.axes &&
-                <PictureCanvas 
-                    axes={bifurcation.axes}
-                    picture={bifurcationPicture}
-                />
-            }
+
         </div>
     </main>
-
-    function resize(w: number, h: number) {
-        setWidth(w)
-        setHeight(h)
-    }
 
     function share() {
         const panels = get(panelsPair)
         const opt = {
+            v: SHARE_VERSION,
             p: axes,
             l: panels.map(panelToOptions),
         }
@@ -111,20 +116,6 @@ export default function Funplot() {
         await exportPdf(axes, width, height, picture)
     }
 
-    async function picture(ctx: ContextWrapper) {
-        // plot
-        let myPicture: Picture = [{
-            type: "axes",
-            options: {labels: {x:'x', y:'y'}}
-        }]
-
-        for(const figure of figures) {
-            const picture = await figure.plot(ctx, parameters)
-            myPicture = myPicture.concat(picture)
-        }
-        return myPicture
-    }
-
     function click(coords: Coords) {
         const panelPairs: State<IPanel>[] = map(panelsPair, panel => panel)
         const figurePairs: State<FigureState>[] = panelPairs.map(panel => getField(panel, 'figure'))
@@ -137,57 +128,4 @@ export default function Funplot() {
         })
     }
 
-    function computeBifurcation() {
-        let enabled = false
-        let param: ParameterState|null = null
-        let my_axes: Axes|null = null
-        for (const figure of figures) {
-            const state = figure.state
-            if (state.type !== "recurrence") {
-                if (state.type === "parameter") {
-                    param=state
-                    my_axes={
-                        x: 0.5*(param.min+param.max),
-                        rx: 0.5*(param.max-param.min),
-                        y: axes.y,
-                        ry: axes.ry,
-                    }
-                }
-                continue
-            }
-            if (!state.drawBifurcation) continue
-            enabled = true
-        }
-        return {
-            enabled,
-            param,
-            axes:my_axes
-        }
-    }
-
-    async function bifurcationPicture(ctx: ContextWrapper): Promise<Picture> {
-        if (!bifurcation.param) return []
-        let picture: Picture = [{
-            type: "axes",
-            options: {labels:{y:'y', x:bifurcation.param.name}}
-        }]
-        for (const figure of figures) {
-            if (figure.state.type !== 'recurrence') continue
-            if (!figure.state.drawBifurcation) continue
-            if (!bifurcation.param) continue
-            const name = bifurcation.param.name
-            const compiledExpr = figure.compiledExpr
-            const func = (x:number,c:number):number => {
-                const vars = {...parameters}
-                vars.x = x
-                return compiledExpr?.evaluate({...parameters,x,[name]:c}) ?? 0.0
-            }
-            picture = [
-                ...picture,
-                ...plotBifurcation(func,ctx.xMin,ctx.xMax,10,ctx.yMin,ctx.yMax,10)
-            ]
-        }
-        return picture
-    }
 }
-

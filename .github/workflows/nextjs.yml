@@ -31,11 +31,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check types
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test regressions
+        run: npm test
+
       - name: Build Next.js app
         run: npm run build
-
-      - name: Export static site
-        run: npm run export
 
       - name: Upload static site to Pages artifact
         uses: actions/upload-pages-artifact@v4

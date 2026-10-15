@@ -411,6 +411,7 @@ function parameterFigure(state: ParameterState, parameters: string[]): Figure {
         compiledExpr = compile(state.expr)
         getVal(compiledExpr, Object.fromEntries(parameters.map(p => [p, 0.0])))
     } catch(e) {
+        compiledExpr = null
         errors.push(`${e}`)
     }
     try {
@@ -428,8 +429,15 @@ function parameterFigure(state: ParameterState, parameters: string[]): Figure {
 
     function eval_(parameters: PlotParameters) {
         if (!compiledExpr) return
-        const value = getVal(compiledExpr, parameters)
-        parameters[state.name] = value
+        try {
+            const value = getVal(compiledExpr, parameters)
+            if (typeof value !== 'number' || !Number.isFinite(value)) {
+                throw new Error('Parameter must evaluate to a finite real number')
+            }
+            parameters[state.name] = value
+        } catch(e) {
+            errors.push(`${e}`)
+        }
     }
 
     return { state, eval: eval_, plot, click, tex, errors, compiledExpr:null }

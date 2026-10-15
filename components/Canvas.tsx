@@ -1,152 +1,107 @@
-import {useState, useCallback,
-    MouseEvent, UIEvent, WheelEvent,
-    Dispatch, SetStateAction,
-    } from 'react'
+import {useState, useCallback, useEffect, useRef, MouseEvent, Dispatch, SetStateAction} from 'react'
 
 import { Axes, ContextWrapper, canvasContext, translateAxes, zoomAxes } from '@/lib/plot'
 import Coords from '@/lib/Coords'
 import useResizeObserver from '@/lib/useResizeObserver'
 
-type PlotFunction = (ctx: ContextWrapper) => Promise<void>
+type PlotFunction = (ctx: ContextWrapper) => void | (() => void)
 
-export default function Canvas({axes,  setAxes, plot, click, move, resize}
-    :{
-        axes: Axes,
-        setAxes?: Dispatch<SetStateAction<Axes>>,
-        plot: PlotFunction,
-        click?: (coords: Coords) => void,
-        move?: (coords: Coords) => void,
-        resize?: (width: number, height: number) => void,
-    }) {
-    const [dragStart, setDragStart] = useState<{x: number, y:number}>({x:0, y:0})
-    const [dragging, setDragging] = useState<boolean>(false)
-    const [moved, setMoved] = useState<boolean>(false)
+export default function Canvas({axes, setAxes, plot, click, move, resize}: {
+    axes: Axes,
+    setAxes?: Dispatch<SetStateAction<Axes>>,
+    plot: PlotFunction,
+    click?: (coords: Coords) => void,
+    move?: (coords: Coords) => void,
+    resize?: (width: number, height: number) => void,
+}) {
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
-    const width = canvas ? canvas.width : 0
-    const height = canvas ? canvas.height : 0
+    const [size, setSize] = useState({width: 640, height: 480})
+    const drag = useRef<{x: number, y: number, axes: Axes, moved: boolean}|null>(null)
+
     const onResize = useCallback((target: HTMLDivElement) => {
-        // Handle the resize event
-        const w = target.clientWidth
-        const h = target.clientHeight
-        //console.log(`resize ${w}x${h}`)
-        if (resize) resize(w, h)
-        if (setAxes) {
-            const a = axes
-            const d = Math.sqrt((a.rx*a.rx + a.ry*a.ry)/(w*w+h*h))
-            setAxes({
-                x: a.x,
-                y: a.y,
-                rx: w*d,
-                ry: h*d,
+        const width = target.clientWidth
+        const height = target.clientHeight
+        if (width <= 0 || height <= 0) return
+        setSize(old => old.width === width && old.height === height ? old : {width, height})
+        resize?.(width, height)
+        setAxes?.(current => {
+            const scale = Math.hypot(current.rx, current.ry) / Math.hypot(width, height)
+            const rx = width * scale
+            const ry = height * scale
+            if (Math.abs(rx - current.rx) < 1e-12 * current.rx &&
+                Math.abs(ry - current.ry) < 1e-12 * current.ry) return current
+            return {...current, rx, ry}
+        })
+    }, [resize, setAxes])
+    const resizeRef = useResizeObserver(onResize)
+
+    useEffect(() => {
+        if (!canvas) return
+        if (canvas.width !== size.width) canvas.width = size.width
+        if (canvas.height !== size.height) canvas.height = size.height
+        const ctx = canvasContext(axes, canvas)
+        if (ctx) return plot(ctx)
+    }, [axes, canvas, plot, size])
+
+    useEffect(() => {
+        if (!canvas || !setAxes) return
+        const wheel = (evt: globalThis.WheelEvent) => {
+            evt.preventDefault()
+            // Capture coordinates before React processes the state update.
+            const position = {clientX: evt.clientX, clientY: evt.clientY}
+            const factor = Math.exp(Math.max(-200, Math.min(200, -evt.deltaY)) / 1600)
+            setAxes(current => {
+                const ctx = canvasContext(current, canvas)
+                if (!ctx) return current
+                const point = ctx.mouseCoords(position)
+                return zoomAxes(current, factor, point.x, point.y)
             })
-            }
-        }, []);
-    const resizeRef = useResizeObserver(onResize);
-    // console.log(`canvas ${width}x${height}`)
+        }
+        canvas.addEventListener('wheel', wheel, {passive: false})
+        return () => canvas.removeEventListener('wheel', wheel)
+    }, [canvas, setAxes])
 
-    const ctx = canvas ? canvasContext(axes, canvas) : null
-
-    //className="h-full w-full" 
-    return <div ref={resizeRef} style={{resize:"both",overflow:"auto",width:"640px",height:"480px"}}>
+    return <div ref={resizeRef} style={{resize: 'both', overflow: 'auto', width: '640px', height: '480px'}}>
         <canvas
             className="app-canvas"
-            style={{width: "100%",height: "100%"}}
-            ref={onRef}
+            style={{width: '100%', height: '100%'}}
+            ref={setCanvas}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
-            onScroll={onScroll}
-            //onWheel={onWheel}
-            //onBlur={blur}
-            onMouseLeave={blur}
+            onMouseLeave={() => {drag.current = null}}
         />
     </div>
 
-    function onRef(myCanvas: HTMLCanvasElement) {
-        // console.log('onRef ${myCanvas}')
-        if (!myCanvas) return
-        // unable to fix type declaration:
-        // hack: using "unknown" to avoid check
-        myCanvas.addEventListener('wheel', (evt) => onWheel(evt as unknown as WheelEvent<HTMLCanvasElement>), {passive: false})
-        myCanvas.width = myCanvas.clientWidth
-        myCanvas.height = myCanvas.clientHeight
-        setCanvas(myCanvas)
-        const myCtx = canvasContext(axes, myCanvas)
-        // set canvas drawing colors from CSS variables so dark mode works
-        try {
-            const cs = getComputedStyle(myCanvas)
-            const fg = cs.getPropertyValue('--foreground-rgb').trim()
-            const canvasBorder = cs.getPropertyValue('--canvas-border-rgb').trim()
-            if (myCtx && myCtx.ctx) {
-                if (fg) myCtx.ctx.fillStyle = `rgb(${fg})`
-                if (canvasBorder) myCtx.ctx.strokeStyle = `rgb(${canvasBorder})`
-            }
-        } catch (e) {
-            // ignore if getComputedStyle not available
-        }
-        //console.log(`Canvas plot ${myCtx!==null}`)
-        if (myCtx) plot(myCtx)
-    }
-    
     function onMouseDown(evt: MouseEvent<HTMLCanvasElement>) {
-        if (!canvas) return
-        if (!ctx) return
-        document.body.style.userSelect = 'none'
-        setDragStart(ctx.mouseCoords(evt))
-        setMoved(false)
-        setDragging(true)
-    }
-    
-    function onMouseMove(evt: MouseEvent<HTMLCanvasElement>) {
-        if (!ctx) return
-        if (!canvas) return
-        const pos = ctx.mouseCoords(evt)
-        document.body.style.cursor="auto"
-        if (dragging && setAxes) {
-            setAxes(translateAxes(axes, dragStart.x-pos.x, dragStart.y-pos.y))
-        }
-        if (move) move(pos)
-        setMoved(true)
-    }
-    
-    function onMouseUp(evt: MouseEvent<HTMLCanvasElement>) {
-        if (!ctx) return
-        const pos = ctx.mouseCoords(evt);
-        if (!moved) { // it's a click!
-            if (click) click(pos)
-        }
-        setMoved(false)
-        setDragging(false)
-        document.body.style.cursor = "auto"
-    }
-    
-    function zoom(delta: number, x:number, y:number) {
-        //console.log('zoom')
-        if (!ctx) return
-        var factor = Math.exp(delta/40)
-        if (setAxes) setAxes(zoomAxes(axes, factor, x, y))
-    }
-
-    function onScroll(evt: UIEvent<HTMLCanvasElement>) {
-        console.log('onScroll')
-        if (!ctx) return
-        zoom(-evt.detail, 0, 0)
-    }
-
-    function onWheel(evt: WheelEvent<HTMLCanvasElement>) {
+        if (evt.button !== 0) return
         evt.preventDefault()
-        //console.log('onWheel')
+        drag.current = {x: evt.clientX, y: evt.clientY, axes, moved: false}
+    }
+
+    function onMouseMove(evt: MouseEvent<HTMLCanvasElement>) {
+        if (!canvas) return
+        const ctx = canvasContext(axes, canvas)
         if (!ctx) return
-        var delta = -evt.deltaY/40 
-        const pos = ctx.mouseCoords(evt)
-        zoom(delta, pos.x, pos.y)
+        const start = drag.current
+        if (start) {
+            const dx = evt.clientX - start.x
+            const dy = evt.clientY - start.y
+            if (Math.hypot(dx, dy) > 3) start.moved = true
+            if (start.moved && setAxes) {
+                setAxes(translateAxes(start.axes,
+                    -dx * 2 * start.axes.rx / canvas.width,
+                    dy * 2 * start.axes.ry / canvas.height))
+            }
+        }
+        move?.(ctx.mouseCoords(evt))
     }
 
-    function blur() {
-        // console.log('blur')
-        setDragging(false)
-        document.body.style.cursor = "auto"
+    function onMouseUp(evt: MouseEvent<HTMLCanvasElement>) {
+        const start = drag.current
+        drag.current = null
+        if (!canvas || !start || start.moved) return
+        const ctx = canvasContext(axes, canvas)
+        if (ctx) click?.(ctx.mouseCoords(evt))
     }
-
 }
-

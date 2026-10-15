@@ -1,4 +1,3 @@
-import { MouseEvent } from 'react'
 import { format } from 'mathjs'
 
 export type Axes = {
@@ -265,7 +264,7 @@ export function context(axes: Axes, width:number, height:number, ctx: DrawingCon
 
 }
 
-export function getMousePos(canvas: HTMLCanvasElement, evt: MouseEvent<HTMLCanvasElement>): {x: number, y: number} {
+export function getMousePos(canvas: HTMLCanvasElement, evt: {clientX: number, clientY: number}): {x: number, y: number} {
   const rect = canvas.getBoundingClientRect()
   return {
     x: evt.clientX - rect.left,
@@ -274,9 +273,9 @@ export function getMousePos(canvas: HTMLCanvasElement, evt: MouseEvent<HTMLCanva
 }
 
 interface CanvasContextWrapper extends ContextWrapper {
-  mouseCoords: (event: MouseEvent<HTMLCanvasElement>) => {x: number, y: number},
-  // eventX: (event: MouseEvent<HTMLCanvasElement>) => number,
-  // eventY: (event: MouseEvent<HTMLCanvasElement>) => number,
+  mouseCoords: (event: {clientX: number, clientY: number}) => {x: number, y: number},
+  // eventX: (event: {clientX: number, clientY: number}) => number,
+  // eventY: (event: {clientX: number, clientY: number}) => number,
 }
 
 export function translateAxes(axes: Axes, dx: number, dy: number): Axes {
@@ -288,12 +287,16 @@ export function translateAxes(axes: Axes, dx: number, dy: number): Axes {
 }
 
 export function zoomAxes(axes: Axes, factor: number, x: number, y: number): Axes {
-  return {
+  if (!Number.isFinite(factor) || factor <= 0) return axes
+  const result = {
     rx: axes.rx / factor,
     ry: axes.ry / factor,
     x: x + (axes.x - x) / factor,
     y: y + (axes.y - y) / factor,
   }
+  if (!Object.values(result).every(Number.isFinite) || result.rx <= 0 || result.ry <= 0 ||
+      result.x + result.rx === result.x || result.y + result.ry === result.y) return axes
+  return result
 }
 
 export function canvasContext(axes: Axes, canvas: HTMLCanvasElement): CanvasContextWrapper|null {
@@ -302,7 +305,7 @@ export function canvasContext(axes: Axes, canvas: HTMLCanvasElement): CanvasCont
   const contextWrapper = context(axes, canvas.width, canvas.height, ctx)
   return {
     ...contextWrapper,
-    mouseCoords: (event: MouseEvent<HTMLCanvasElement>) => {
+    mouseCoords: (event: {clientX: number, clientY: number}) => {
       const coords = getMousePos(canvas, event);
       return {
         x: contextWrapper.x_pixel(coords.x),
@@ -310,8 +313,8 @@ export function canvasContext(axes: Axes, canvas: HTMLCanvasElement): CanvasCont
       }
     },
     /*
-    eventX: (event: MouseEvent<HTMLCanvasElement>) => contextWrapper.x_pixel(event.offsetX),
-    eventY: (event: MouseEvent<HTMLCanvasElement>) => contextWrapper.y_pixel(event.offsetY),
+    eventX: (event: {clientX: number, clientY: number}) => contextWrapper.x_pixel(event.offsetX),
+    eventY: (event: {clientX: number, clientY: number}) => contextWrapper.y_pixel(event.offsetY),
     */
   }
 }

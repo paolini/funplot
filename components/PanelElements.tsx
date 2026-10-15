@@ -43,26 +43,26 @@ export default function PanelElements({panelsPair, figures, cursor}:{
             case 'graph':
                 return <GraphPanel 
                         key={panel.key} 
-                        state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, state)}
+                        state={extractFigurePairFromPanels<GraphFigureState>(panelsPair, panel)}
                         figure={figures[i]}
                         active={active}
                         move={move}
                 />
             case 'implicit':
                 return <ImplicitPanel 
-                        key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, state)}
+                        key={panel.key} state={extractFigurePairFromPanels<ImplicitFigureState>(panelsPair, panel)}
                         figure={figures[i]}
                         active={active}
                         move={move}
                 />
             case 'ode':
-                return <OdeEquationPanel key={panel.key} state={extractFigurePairFromPanels<OdeEquationFigureState>(panelsPair, state)}
+                return <OdeEquationPanel key={panel.key} state={extractFigurePairFromPanels<OdeEquationFigureState>(panelsPair, panel)}
                         figure={figures[i]}
                         active={active}
                         move={move}
                     />
             case 'system':
-                return <OdeSystemPanel key={panel.key} state={extractFigurePairFromPanels<OdeSystemFigureState>(panelsPair, state)}
+                return <OdeSystemPanel key={panel.key} state={extractFigurePairFromPanels<OdeSystemFigureState>(panelsPair, panel)}
                         figure={figures[i]}
                         active={active}
                         move={move}
@@ -70,13 +70,13 @@ export default function PanelElements({panelsPair, figures, cursor}:{
             case 'recurrence':
                 return <RecurrencePanel 
                     key={panel.key} 
-                    state={extractFigurePairFromPanels<RecurrenceFigureState>(panelsPair, state)}
+                    state={extractFigurePairFromPanels<RecurrenceFigureState>(panelsPair, panel)}
                     figure={figures[i]}
                     active={active}
                     move={move}
                 />
             case 'parameter':
-                return <ParameterPanel key={panel.key} state={extractFigurePairFromPanels<ParameterState>(panelsPair, state)}
+                return <ParameterPanel key={panel.key} state={extractFigurePairFromPanels<ParameterState>(panelsPair, panel)}
                     figure={figures[i]}
                     active={active}
                     move={move}

@@ -14,19 +14,13 @@ export type IPanel = {
 
 // construct the setFigure function
 // from the setPanels function
-export function extractFigurePairFromPanels<FigureType extends FigureState>(panelsPair: State<IPanel[]>, figure: FigureType): State<FigureType> {
-    const [panels, setPanels] = panelsPair
-    function setFigure(cb: (old: FigureType) => FigureType) {
-        setPanels(panels => panels.map((p: IPanel) => {
-            if (p.figure === figure) {
-                const newPanel: IPanel = {...p, figure: cb(figure)}
-                return newPanel
-            } else {
-                return p
-            }
-        }))
-    }
-    return [figure, setFigure]
+export function extractFigurePairFromPanels<FigureType extends FigureState>(panelsPair: State<IPanel[]>, panel: IPanel): State<FigureType> {
+    const [, setPanels] = panelsPair
+    return [panel.figure as FigureType, cb => {
+        setPanels(panels => panels.map(p => p.key === panel.key
+            ? {...p, figure: cb(p.figure as FigureType)}
+            : p))
+    }]
 }
 
 const DEFAULT_FIGURE: {
@@ -89,9 +83,13 @@ const DEFAULT_FIGURE: {
 }
 
 export function newPanel(value: string|FigureState) {
-    const figure: FigureState = typeof(value)==='string' 
+    const template: FigureState = typeof(value)==='string'
         ? DEFAULT_FIGURE[value] 
         : value
+    if (!template) throw new Error(`Unknown figure type: ${value}`)
+    const figure: FigureState = template.type === 'ode' || template.type === 'system'
+        ? {...template, points: template.points.map(point => ({...point}))}
+        : {...template}
     return {
         figure,
         key: Math.random().toString(36).substring(7),

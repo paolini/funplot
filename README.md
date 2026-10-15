@@ -14,7 +14,7 @@ yarn dev
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000/funplot](http://localhost:3000/funplot) with your browser to see the result.
 
 ## Next.js
 
@@ -34,3 +34,27 @@ npm run build
 ```
 
 then run a web server on the `out` directory.
+
+## Checks
+
+Use Node.js 24 (also used by CI), install with `npm ci`, then run:
+
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+The regression suite uses Node's built-in test runner and the existing TypeScript
+compiler. It covers independent panel updates, shared-link compatibility and
+validation, parameter errors, and termination of ODE integration.
+
+`npm run build` already exports the static site into `out`; a separate export
+step is unnecessary. The build currently downloads the Inter font from Google.
+The configured base path is `/funplot`.
+
+Shared links carry a format version and retain support for historical unversioned
+links. Invalid links show an error without replacing the current plot. The
+unfinished bifurcation diagram is temporarily unavailable; its saved setting is
+preserved when opening and sharing existing plots.

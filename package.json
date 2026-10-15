@@ -7,7 +7,9 @@
     "build": "next build",
     "export": "next export",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --require ./tests/register.cjs tests/regressions.test.cjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@matejmazur/react-katex": "^3.1.3",
