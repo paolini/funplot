@@ -1,7 +1,8 @@
-import {useState, useCallback, useEffect, useRef, MouseEvent, Dispatch, SetStateAction} from 'react'
+import {useState, useCallback, useEffect, useLayoutEffect, useRef, PointerEvent, Dispatch, SetStateAction} from 'react'
 
-import { Axes, ContextWrapper, canvasContext, translateAxes, zoomAxes } from '@/lib/plot'
+import { Axes, ContextWrapper, canvasContext, zoomAxes } from '@/lib/plot'
 import Coords from '@/lib/Coords'
+import CanvasGesture from '@/lib/CanvasGesture'
 import useResizeObserver from '@/lib/useResizeObserver'
 
 type PlotFunction = (ctx: ContextWrapper) => void | (() => void)
@@ -16,7 +17,9 @@ export default function Canvas({axes, setAxes, plot, click, move, resize}: {
 }) {
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null)
     const [size, setSize] = useState({width: 640, height: 480})
-    const drag = useRef<{x: number, y: number, axes: Axes, moved: boolean}|null>(null)
+    const gesture = useRef(new CanvasGesture())
+    const currentAxes = useRef(axes)
+    useLayoutEffect(() => {currentAxes.current = axes}, [axes])
 
     const onResize = useCallback((target: HTMLDivElement) => {
         const width = target.clientWidth
@@ -64,44 +67,60 @@ export default function Canvas({axes, setAxes, plot, click, move, resize}: {
     return <div ref={resizeRef} style={{resize: 'both', overflow: 'auto', width: '640px', height: '480px'}}>
         <canvas
             className="app-canvas"
-            style={{width: '100%', height: '100%'}}
+            style={{width: '100%', height: '100%', touchAction: 'none', userSelect: 'none'}}
             ref={setCanvas}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
-            onMouseLeave={() => {drag.current = null}}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={cancelPointer}
+            onLostPointerCapture={cancelPointer}
         />
     </div>
 
-    function onMouseDown(evt: MouseEvent<HTMLCanvasElement>) {
+    function viewport(target: HTMLCanvasElement) {
+        const rect = target.getBoundingClientRect()
+        return {width: rect.width, height: rect.height}
+    }
+
+    function position(evt: PointerEvent<HTMLCanvasElement>) {
+        const rect = evt.currentTarget.getBoundingClientRect()
+        return {x: evt.clientX - rect.left, y: evt.clientY - rect.top}
+    }
+
+    function onPointerDown(evt: PointerEvent<HTMLCanvasElement>) {
         if (evt.button !== 0) return
         evt.preventDefault()
-        drag.current = {x: evt.clientX, y: evt.clientY, axes, moved: false}
+        evt.currentTarget.setPointerCapture(evt.pointerId)
+        gesture.current.begin(evt.pointerId, position(evt), currentAxes.current, viewport(evt.currentTarget))
     }
 
-    function onMouseMove(evt: MouseEvent<HTMLCanvasElement>) {
-        if (!canvas) return
-        const ctx = canvasContext(axes, canvas)
-        if (!ctx) return
-        const start = drag.current
-        if (start) {
-            const dx = evt.clientX - start.x
-            const dy = evt.clientY - start.y
-            if (Math.hypot(dx, dy) > 3) start.moved = true
-            if (start.moved && setAxes) {
-                setAxes(translateAxes(start.axes,
-                    -dx * 2 * start.axes.rx / canvas.width,
-                    dy * 2 * start.axes.ry / canvas.height))
-            }
+    function updateGesture(evt: PointerEvent<HTMLCanvasElement>) {
+        const next = gesture.current.move(evt.pointerId, position(evt))
+        if (next && setAxes) {
+            currentAxes.current = next
+            setAxes(next)
         }
-        move?.(ctx.mouseCoords(evt))
     }
 
-    function onMouseUp(evt: MouseEvent<HTMLCanvasElement>) {
-        const start = drag.current
-        drag.current = null
-        if (!canvas || !start || start.moved) return
-        const ctx = canvasContext(axes, canvas)
-        if (ctx) click?.(ctx.mouseCoords(evt))
+    function onPointerMove(evt: PointerEvent<HTMLCanvasElement>) {
+        updateGesture(evt)
+        const ctx = canvasContext(currentAxes.current, evt.currentTarget)
+        if (ctx) move?.(ctx.mouseCoords(evt))
+    }
+
+    function onPointerUp(evt: PointerEvent<HTMLCanvasElement>) {
+        updateGesture(evt)
+        const tap = gesture.current.end(evt.pointerId, currentAxes.current, viewport(evt.currentTarget))
+        if (evt.currentTarget.hasPointerCapture(evt.pointerId)) {
+            evt.currentTarget.releasePointerCapture(evt.pointerId)
+        }
+        if (tap) {
+            const ctx = canvasContext(currentAxes.current, evt.currentTarget)
+            if (ctx) click?.(ctx.mouseCoords(evt))
+        }
+    }
+
+    function cancelPointer(evt: PointerEvent<HTMLCanvasElement>) {
+        gesture.current.end(evt.pointerId, currentAxes.current, viewport(evt.currentTarget), true)
     }
 }

@@ -120,3 +120,91 @@ test('invalid or exhausted zoom does not corrupt axes', () => {
     }
     assert.deepEqual(zoomAxes(axes, 2, 0, 0), {x: 0, y: 0, rx: 2, ry: 1.5});
 });
+
+const CanvasGesture = require('../lib/CanvasGesture.ts').default;
+const viewport = {width: 640, height: 480};
+const worldAt = (axes, point) => ({
+    x: axes.x + (2 * point.x / viewport.width - 1) * axes.rx,
+    y: axes.y - (2 * point.y / viewport.height - 1) * axes.ry,
+});
+const close = (actual, expected) => {
+    for (const key of Object.keys(expected)) {
+        assert.ok(Math.abs(actual[key] - expected[key]) < 1e-10, `${key}: ${actual[key]} != ${expected[key]}`);
+    }
+};
+
+test('a single pointer pans, while a tap still inserts a point', () => {
+    const gesture = new CanvasGesture();
+    gesture.begin(1, {x: 320, y: 240}, axes, viewport);
+    assert.equal(gesture.move(1, {x: 322, y: 241}), undefined);
+    assert.equal(gesture.end(1, axes, viewport), true);
+    gesture.begin(2, {x: 320, y: 240}, axes, viewport);
+    const panned = gesture.move(2, {x: 400, y: 280});
+    close(panned, {...axes, x: -1, y: 0.5});
+    assert.equal(gesture.end(2, panned, viewport), false);
+});
+
+test('pinch doubles scale around the midpoint rather than the viewport center', () => {
+    const gesture = new CanvasGesture();
+    gesture.begin(1, {x: 200, y: 150}, axes, viewport);
+    gesture.begin(2, {x: 400, y: 150}, axes, viewport);
+    const anchor = worldAt(axes, {x: 300, y: 150});
+    const intermediate = gesture.move(1, {x: 100, y: 150});
+    close(worldAt(intermediate, {x: 250, y: 150}), anchor);
+    const zoomed = gesture.move(2, {x: 500, y: 150});
+    assert.equal(zoomed.rx, 2);
+    assert.equal(zoomed.ry, 1.5);
+    close(worldAt(zoomed, {x: 300, y: 150}), anchor);
+    assert.equal(gesture.end(1, zoomed, viewport), false);
+    assert.equal(gesture.end(2, zoomed, viewport), false);
+});
+
+test('pinching inward and moving both fingers pans and zooms together', () => {
+    const gesture = new CanvasGesture();
+    gesture.begin(1, {x: 100, y: 200}, axes, viewport);
+    gesture.begin(2, {x: 500, y: 200}, axes, viewport);
+    gesture.move(1, {x: 250, y: 260});
+    const result = gesture.move(2, {x: 450, y: 260});
+    assert.equal(result.rx, 8);
+    assert.equal(result.ry, 6);
+    close(worldAt(result, {x: 350, y: 260}), worldAt(axes, {x: 300, y: 200}));
+});
+
+test('adding or lifting a finger rebases the gesture without a jump or accidental tap', () => {
+    const gesture = new CanvasGesture();
+    gesture.begin(1, {x: 100, y: 100}, axes, viewport);
+    const panned = gesture.move(1, {x: 120, y: 100});
+    gesture.begin(2, {x: 220, y: 100}, panned, viewport);
+    close(gesture.move(2, {x: 220, y: 100}), panned);
+    const zoomed = gesture.move(2, {x: 320, y: 100});
+    assert.equal(gesture.end(1, zoomed, viewport), false);
+    close(gesture.move(2, {x: 320, y: 100}), zoomed);
+    const continued = gesture.move(2, {x: 340, y: 130});
+    close(continued, {...zoomed,
+        x: zoomed.x - 20 * 2 * zoomed.rx / viewport.width,
+        y: zoomed.y + 30 * 2 * zoomed.ry / viewport.height,
+    });
+    assert.equal(gesture.end(2, continued, viewport), false);
+});
+
+test('cancelled pointers and lost capture cannot create a click or leave a stuck gesture', () => {
+    const gesture = new CanvasGesture();
+    gesture.begin(1, {x: 100, y: 100}, axes, viewport);
+    assert.equal(gesture.end(1, axes, viewport, true), false);
+    assert.equal(gesture.move(1, {x: 200, y: 200}), undefined);
+    assert.equal(gesture.end(1, axes, viewport), false);
+    gesture.begin(2, {x: 100, y: 100}, axes, viewport);
+    assert.equal(gesture.end(2, axes, viewport), true);
+});
+
+test('coincident pinch pointers do not produce invalid scales', () => {
+    const gesture = new CanvasGesture();
+    gesture.begin(1, {x: 100, y: 100}, axes, viewport);
+    gesture.begin(2, {x: 100, y: 100}, axes, viewport);
+    assert.equal(gesture.move(2, {x: 110, y: 100}), undefined);
+    const result = gesture.move(2, {x: 120, y: 100});
+    assert.ok(Object.values(result).every(Number.isFinite));
+    assert.equal(gesture.move(2, {x: 100, y: 100}), undefined);
+    assert.equal(gesture.end(1, result, viewport), false);
+    assert.equal(gesture.end(2, result, viewport), false);
+});

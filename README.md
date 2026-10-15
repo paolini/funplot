@@ -58,3 +58,11 @@ Shared links carry a format version and retain support for historical unversione
 links. Invalid links show an error without replacing the current plot. The
 unfinished bifurcation diagram is temporarily unavailable; its saved setting is
 preserved when opening and sharing existing plots.
+
+## Canvas gestures
+
+Drag with one finger (or the mouse) to pan. Pinch with two fingers to zoom around
+their midpoint; moving both fingers also pans. A short tap still selects an
+initial point for ODEs and recurrences. Gestures beginning on the canvas are
+handled by the plot rather than by browser page zoom. Scrolling and zooming
+outside the canvas retain normal browser behavior.
