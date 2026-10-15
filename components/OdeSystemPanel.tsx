@@ -1,5 +1,6 @@
+import type {PanelFigure} from '@/lib/plotScene'
 import { get, getField, State } from '@/lib/State'
-import { FigureState, OdeSystemFigureState, Figure } from '@/lib/figures'
+import { FigureState, OdeSystemFigureState } from '@/lib/figures'
 import PanelBand from './PanelBand'
 import SlopeControl from './SlopeControl'
 import Separator from './Separator'
@@ -10,7 +11,7 @@ import Errors from './Errors'
 
 export default function OdeSystemPanel({state, figure, active, move} : {
     state: State<OdeSystemFigureState>,
-    figure: Figure,
+    figure: PanelFigure,
     active: State<boolean>
     move: (f: FigureState, n: number) => void,
 }) {

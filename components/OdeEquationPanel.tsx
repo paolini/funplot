@@ -1,5 +1,5 @@
+import type {PanelFigure} from '@/lib/plotScene'
 import {State,get,getField} from '@/lib/State'
-import {Figure} from '@/lib/figures'
 import { FigureState, OdeEquationFigureState } from '@/lib/figures'
 import Checkbox from './Checkbox'
 import Separator from './Separator'
@@ -11,7 +11,7 @@ import Errors from './Errors'
 export default function OdeEquationPanel({state, figure, active, move}: 
     {
         state: State<OdeEquationFigureState>,
-        figure: Figure,
+        figure: PanelFigure,
         active: State<boolean>,
         move: (f: FigureState, n: number) => void,
     }) {

@@ -1,15 +1,16 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import assert from 'assert'
 
 import { ContextWrapper } from '@/lib/plot'
-import { get, set, getField, update, map, State, } from '@/lib/State'
+import { get, update } from '@/lib/State'
 import Coords from '@/lib/Coords'
 import PictureCanvas from '@/components/PictureCanvas'
-import { FigureState, ParameterState, createFigure } from '@/lib/figures'
+import type { FigureState } from '@/lib/figures'
 import { Axes } from '@/lib/plot'
 import Messages, { IMessage } from './Messages'
-import { Picture } from '@/lib/picture'
+import type {FigurePresentation, PanelFigure} from '@/lib/plotScene'
+import {createPlotWorker} from '@/lib/createPlotWorker'
+import {figureClick} from '@/lib/figureClick'
 import { hashLoad, panelToOptions, SHARE_VERSION } from '@/lib/hashConverter'
 import { IPanel, exportPdf, newPanel } from '@/lib/funplot'
 import Header from '@/components/Header'
@@ -51,22 +52,24 @@ export default function Funplot() {
     /* eslint-enable react-hooks/set-state-in-effect */
 
     const panels = get(panelsPair)
-    const {figures, parameters} = useMemo(() => {
-        const parameterList = panels
-            .map(panel => panel.figure)
-            .filter((figure): figure is ParameterState => figure.type === 'parameter')
-            .map(figure => figure.name)
-        const figures = panels.map(panel => createFigure(panel.figure, parameterList))
-        const parameters = Object.fromEntries(parameterList.map(name => [name, 0]))
-        for (const figure of figures) figure.eval(parameters)
-        return {figures, parameters}
-    }, [panels])
+    const states = useMemo(() => panels.map(panel => panel.figure), [panels])
+    const [presentations, setPresentations] = useState<{
+        states: FigureState[], figures: FigurePresentation[],
+    } | null>(null)
+    const figures: PanelFigure[] = states.map(state => {
+        const index = presentations?.states.indexOf(state) ?? -1
+        return {state, ...(presentations?.figures[index] ?? {tex: '\\ldots', errors: []})}
+    })
+    const prepared = useCallback((states: FigureState[], figures: FigurePresentation[]) => {
+        setPresentations({states, figures})
+    }, [])
+    const plotError = useCallback((error: unknown) => {
+        const message = `Unable to calculate plot: ${String(error)}`
+        setMessages(items => items.some(item => item.message === message) ? items : [...items, {type: 'error', message}])
+    }, [setMessages])
 
-    const picture = useCallback(async (ctx: ContextWrapper): Promise<Picture> => {
-        let result: Picture = [{type: 'axes', options: {labels: {x: 'x', y: 'y'}}}]
-        for (const figure of figures) result = result.concat(await figure.plot(ctx, parameters))
-        return result
-    }, [figures, parameters])
+    const pdfComputer = usePlotComputer()
+    const picture = useCallback((ctx: ContextWrapper) => pdfComputer.compute(states, ctx), [pdfComputer, states])
     
     return <main className="app-main">
         <Header 
@@ -83,7 +86,9 @@ export default function Funplot() {
             <PictureCanvas 
                 axes={axes}
                 setAxes={setAxes}
-                picture={picture}
+                states={states}
+                prepared={prepared}
+                error={plotError}
                 click={click}
                 move={move}
                 resize={resize}
@@ -115,20 +120,24 @@ export default function Funplot() {
     }
 
     async function downloadPDF() {
-        if (!width || !height) throw new Error(`invalid size ${width}x${height}`)
-        await exportPdf(axes, width, height, picture)
+        try {
+            if (!width || !height) throw new Error(`invalid size ${width}x${height}`)
+            await exportPdf(axes, width, height, picture)
+        } catch (error) {
+            if (!(error instanceof Error && error.name === 'AbortError')) plotError(error)
+        }
     }
 
     function click(coords: Coords) {
-        const panelPairs: State<IPanel>[] = map(panelsPair, panel => panel)
-        const figurePairs: State<FigureState>[] = panelPairs.map(panel => getField(panel, 'figure'))
-        assert(figures.length === panelPairs.length)
-        assert(figures.length === figurePairs.length)
-        figures.forEach((figure,i) => {
-            if (get(panelPairs[i]).active) {
-                figure.click(getField(panelPairs[i],'figure'), coords)
-            }
-        })
+        setPanels(panels => panels.map(panel => panel.active
+            ? {...panel, figure: figureClick(panel.figure, coords)}
+            : panel))
     }
 
+}
+
+function usePlotComputer() {
+    const [computer] = useState(createPlotWorker)
+    useEffect(() => () => computer.dispose(), [computer])
+    return computer
 }

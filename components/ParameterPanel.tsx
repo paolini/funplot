@@ -1,5 +1,6 @@
+import type {PanelFigure} from '@/lib/plotScene'
 import { get, getField, State, onChange } from '@/lib/State'
-import { FigureState, ParameterState, Figure } from '@/lib/figures'
+import { FigureState, ParameterState } from '@/lib/figures'
 import PanelBand from './PanelBand'
 import Input from './Input'
 import InputNumber from './InputNumber'
@@ -8,7 +9,7 @@ import Errors from './Errors'
 export function ParameterPanel({state, figure, active, move}: 
     {
         state: State<ParameterState>,
-        figure: Figure,
+        figure: PanelFigure,
         active: State<boolean>,
         move: (f: FigureState, n: number) => void,
     }) {

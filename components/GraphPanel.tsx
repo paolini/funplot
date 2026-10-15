@@ -1,5 +1,6 @@
+import type {PanelFigure} from '@/lib/plotScene'
 import { get, getField, State } from '@/lib/State'
-import { FigureState, GraphFigureState, Figure } from '@/lib/figures'
+import { FigureState, GraphFigureState } from '@/lib/figures'
 import PanelBand from './PanelBand'
 import Input from './Input'
 import Errors from './Errors'
@@ -7,7 +8,7 @@ import Errors from './Errors'
 export default function GraphPanel({state, figure, active, move}: 
     {
         state: State<GraphFigureState>,
-        figure: Figure,
+        figure: PanelFigure,
         active: State<boolean>,
         move: (f: FigureState, n: number) => void,
     }) {

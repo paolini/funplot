@@ -6,6 +6,9 @@ const {hashLoad, panelToOptions, SHARE_VERSION} = require('../lib/hashConverter.
 const {createFigure} = require('../lib/figures.ts');
 const {odePlot, slopeGraph} = require('../lib/plotOde.ts');
 const {zoomAxes} = require('../lib/plot.ts');
+const PlotWorkerClient = require('../lib/PlotWorkerClient.ts').default;
+const {calculateScene} = require('../lib/plotScene.ts');
+const {figureClick} = require('../lib/figureClick.ts');
 
 const axes = {x: 0, y: 0, rx: 4, ry: 3};
 const plot = {xMin: -4, xMax: 4, yMin: -3, yMax: 3, radius: 5, width: 640, height: 480};
@@ -239,4 +242,158 @@ test('an unset parameter is displayed as a question mark rather than undefined',
     }
     const figure = createFigure({...newPanel('parameter').figure, expr: '0.125'}, ['c']);
     assert.equal(figure.tex, 'c = 0.125');
+});
+
+class FakePlotWorker {
+    requests = [];
+    terminated = false;
+    postMessage(request) { this.requests.push(structuredClone(request)); }
+    terminate() { this.terminated = true; }
+    reply(data) { this.onmessage?.({data}); }
+}
+
+function computer() {
+    const workers = [];
+    const client = new PlotWorkerClient(() => {
+        const worker = new FakePlotWorker();
+        workers.push(worker);
+        return worker;
+    });
+    return {client, workers};
+}
+
+test('worker receives only serializable viewport data and reuses an idle thread', async () => {
+    const {client, workers} = computer();
+    const states = [newPanel('graph').figure];
+    const presentations = [];
+    const first = client.compute(states, {...plot, ctx: {draw() {}}, moveTo() {}}, undefined,
+        figures => presentations.push(figures));
+    const worker = workers[0];
+    assert.deepEqual(worker.requests[0].viewport, plot);
+    worker.reply({id: 1, type: 'prepared', figures: [{tex: 'y=x', errors: []}]});
+    worker.reply({id: 1, type: 'picture', picture: []});
+    assert.deepEqual(await first, []);
+    assert.equal(presentations[0][0].tex, 'y=x');
+    const second = client.compute(states, plot);
+    assert.equal(workers.length, 1);
+    worker.reply({id: 1, type: 'picture', picture: ['stale']});
+    worker.reply({id: 2, type: 'picture', picture: []});
+    assert.deepEqual(await second, []);
+    client.dispose();
+    assert.equal(worker.terminated, true);
+});
+
+test('superseding a calculation terminates its thread and ignores queued results', async () => {
+    const {client, workers} = computer();
+    const first = client.compute([], plot);
+    const rejected = assert.rejects(first, {name: 'AbortError'});
+    const staleMessage = workers[0].onmessage;
+    const second = client.compute([], plot);
+    assert.equal(workers[0].terminated, true);
+    staleMessage({data: {id: 1, type: 'picture', picture: ['stale']}});
+    workers[1].reply({id: 2, type: 'picture', picture: []});
+    assert.deepEqual(await second, []);
+    await rejected;
+    client.dispose();
+});
+
+test('aborting or unmounting rejects pending work and permits a clean restart', async () => {
+    const {client, workers} = computer();
+    const controller = new AbortController();
+    const first = client.compute([], plot, controller.signal);
+    const rejected = assert.rejects(first, {name: 'AbortError'});
+    controller.abort();
+    await rejected;
+    assert.equal(workers[0].terminated, true);
+    await assert.rejects(client.compute([], plot, controller.signal), {name: 'AbortError'});
+    assert.equal(workers.length, 1);
+    const second = client.compute([], plot);
+    const unmounted = assert.rejects(second, {name: 'AbortError'});
+    client.dispose();
+    await unmounted;
+    const third = client.compute([], plot);
+    workers[2].reply({id: 3, type: 'picture', picture: []});
+    assert.deepEqual(await third, []);
+    client.dispose();
+});
+
+test('worker startup, protocol and transport failures reject instead of hanging', async () => {
+    await assert.rejects(new PlotWorkerClient(() => {throw new Error('unsupported');}).compute([], plot), /unsupported/);
+    const {client, workers} = computer();
+    const first = client.compute([], plot);
+    const failed = assert.rejects(first, /calculation failed/);
+    workers[0].reply({id: 1, type: 'error', message: 'calculation failed'});
+    await failed;
+    const second = client.compute([], plot);
+    const crashed = assert.rejects(second, /worker crashed/);
+    workers[1].onerror({message: 'worker crashed', preventDefault() {}});
+    await crashed;
+    const third = client.compute([], plot);
+    const unreadable = assert.rejects(third, /Unable to read/);
+    workers[2].onmessageerror({});
+    await unreadable;
+    assert.ok(workers.every(worker => worker.terminated));
+});
+
+test('scene computation preserves parameter order, drawing order and validation errors', async () => {
+    const states = [
+        {...newPanel('parameter').figure, name: 'c', expr: '2'},
+        {...newPanel('parameter').figure, name: 'd', expr: 'c+1'},
+        {...newPanel('graph').figure, expr: 'd*x'},
+        {...newPanel('parameter').figure, name: 'bad', expr: '1/0'},
+    ];
+    let metadata;
+    const picture = await calculateScene(states, plot, figures => {metadata = figures;});
+    assert.equal(picture[0].type, 'axes');
+    assert.ok(metadata[3].errors.some(message => message.includes('finite real number')));
+    const graph = createFigure(states[2], ['c', 'd', 'bad']);
+    assert.deepEqual(picture.slice(1), await graph.plot(plot, {c: 2, d: 3, bad: 0}));
+    assert.doesNotThrow(() => structuredClone({picture, metadata}));
+});
+
+test('real worker computes every figure type with the same geometry as the numerical core', {timeout: 15000}, async t => {
+    const {Worker} = require('node:worker_threads');
+    const path = require('node:path');
+    const worker = new Worker(path.join(__dirname, 'plot-worker.cjs'));
+    t.after(() => worker.terminate());
+    const states = ['graph', 'graph_inverted', 'implicit', 'ode', 'system', 'recurrence', 'parameter']
+        .map(type => newPanel(type).figure);
+    for (const state of states) {
+        if (state.type === 'ode' || state.type === 'system') {
+            state.gridCount = 3;
+            state.points = [{x: 1, y: 0}];
+            state.drawSlope = true;
+        }
+        if (state.type === 'recurrence') state.start = 0.5;
+    }
+    const viewport = {...plot, width: 80, height: 60};
+    let metadata;
+    const expected = await calculateScene(states, viewport, figures => {metadata = figures;});
+    const messages = await new Promise((resolve, reject) => {
+        const received = [];
+        worker.on('error', reject);
+        worker.on('message', message => {
+            received.push(message);
+            if (message.type === 'error') reject(new Error(message.message));
+            if (message.type === 'picture') resolve(received);
+        });
+        worker.postMessage({id: 42, states, viewport});
+    });
+    assert.deepEqual(messages, [
+        {id: 42, type: 'prepared', figures: metadata},
+        {id: 42, type: 'picture', picture: expected},
+    ]);
+});
+
+test('UI clicks still add initial points and recurrence starts without evaluating formulas', () => {
+    const point = {x: 2, y: 3};
+    for (const type of ['ode', 'system']) {
+        const state = newPanel(type).figure;
+        const next = figureClick(state, point);
+        assert.deepEqual(next.points, [point]);
+        assert.deepEqual(state.points, []);
+    }
+    assert.equal(figureClick(newPanel('recurrence').figure, point).start, 2);
+    const graph = {...newPanel('graph').figure, expr: 'not a valid formula'};
+    assert.strictEqual(figureClick(graph, point), graph);
 });

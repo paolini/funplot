@@ -1,5 +1,5 @@
+import type {PanelFigure} from '@/lib/plotScene'
 import {State,getField} from '@/lib/State'
-import {Figure} from '@/lib/figures'
 import { FigureState, ImplicitFigureState } from '@/lib/figures'
 import PanelBand from './PanelBand'
 import Input from './Input'
@@ -8,7 +8,7 @@ import Errors from './Errors'
 export default function ImplicitPanel({state, figure, active, move}: 
     {
         state: State<ImplicitFigureState>,
-        figure: Figure,
+        figure: PanelFigure,
         active: State<boolean>,
         move: (f: FigureState, n: number) => void,
     }) {

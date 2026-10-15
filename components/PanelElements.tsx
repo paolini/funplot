@@ -1,6 +1,7 @@
+import type {PanelFigure} from '@/lib/plotScene'
 import assert from 'assert'
 
-import { Figure, FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, RecurrenceFigureState, ParameterState } from '@/lib/figures'
+import { FigureState, GraphFigureState, ImplicitFigureState, OdeEquationFigureState, OdeSystemFigureState, RecurrenceFigureState, ParameterState } from '@/lib/figures'
 import { get, set, getField, update, map, extract, State, } from '@/lib/State'
 import GraphPanel from './GraphPanel'
 import ImplicitPanel from './ImplicitPanel'
@@ -13,7 +14,7 @@ import Coords from '@/lib/Coords'
 
 export default function PanelElements({panelsPair, figures, cursor}:{
     panelsPair: State<IPanel[]>,
-    figures: Figure[],
+    figures: PanelFigure[],
     cursor?: Coords,
 }) {
     const panels = get(panelsPair)

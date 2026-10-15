@@ -70,6 +70,23 @@ initial point for ODEs and recurrences. Gestures beginning on the canvas are
 handled by the plot rather than by browser page zoom. Scrolling and zooming
 outside the canvas retain normal browser behavior.
 
+## Background calculations
+
+Formula compilation, validation and numerical plotting run in a dedicated Web
+Worker. The main thread handles controls and draws the returned geometry on the
+canvas. Changes are debounced by 100 ms; replacing a pending calculation terminates
+its worker immediately, so obsolete work cannot delay or overwrite the latest
+plot. The last completed geometry remains visible during recalculation.
+
+PDF export uses an independent worker with the same numerical code and a snapshot
+of the plot at the time of export. Canvas changes do not cancel an export. Idle
+workers are reused and are terminated when the view unmounts. Worker failures show
+an error in the interface rather than falling back to blocking calculations.
+
+The static build bundles the worker and its dependencies under `/funplot`.
+Regression tests cover cancellation, late results, worker failures and all figure
+types running on a real worker thread.
+
 
 ## Dependency baseline
 

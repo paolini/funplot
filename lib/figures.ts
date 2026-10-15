@@ -1,12 +1,12 @@
 import { compile, parse, type EvalFunction } from 'mathjs'
-import assert from 'assert'
 
 import {plotGraph,plotInvertedGraph} from '@/lib/plotGraph'
 import levelPlot from './plotLevels'
 import { odePlot, slopeGraph, OdePlotOptions, Fun2 } from '@/lib/plotOde'
 import { plotRecurrence } from '@/lib/plotRecurrence'
 import Coords from '@/lib/Coords'
-import { State, getField, update, set } from './State'
+import { State, update } from './State'
+import {figureClick} from './figureClick'
 import { Picture } from './picture'
 import { AxesWrapper } from './plot'
 
@@ -241,10 +241,7 @@ function odeEquationFigure(state: OdeEquationFigureState, parameters: string[]):
     }
 
     function click(statePair: State<FigureState>, point: Coords) {
-        assert(statePair[0].type === 'ode')
-        const odePair: State<OdeEquationFigureState> = statePair as State<OdeEquationFigureState>
-        const points = getField(odePair, 'points')
-        update<Coords[]>(points, points => [...points, point])
+        update(statePair, state => figureClick(state, point))
     }
 
     function eval_(parameters: PlotParameters) {}
@@ -290,10 +287,7 @@ function odeSystemFigure(state: OdeSystemFigureState, parameterList: string[]): 
     }
 
     function click(statePair: State<FigureState>, point: Coords) {
-        assert(statePair[0].type === 'system')
-        const systemPair: State<OdeSystemFigureState> = statePair as State<OdeSystemFigureState>
-        const points = getField(systemPair, 'points')
-        update<Coords[]>(points, points => [...points, point])
+        update(statePair, state => figureClick(state, point))
     }
 
     function eval_(parameters: PlotParameters) {}
@@ -387,10 +381,7 @@ function recurrenceFigure(state: RecurrenceFigureState, parameterList: string[])
     }
 
     function click(statePair: State<FigureState>, point: Coords) {
-        assert(statePair[0].type === 'recurrence')
-        const recurrencePair: State<RecurrenceFigureState> = statePair as State<RecurrenceFigureState>
-        const start = getField(recurrencePair, 'start')
-        set(start, point.x)
+        update(statePair, state => figureClick(state, point))
     }
 
     function eval_(parameters: PlotParameters) {}

@@ -1,5 +1,6 @@
+import type {PanelFigure} from '@/lib/plotScene'
 import { get, getField, State } from '@/lib/State'
-import { FigureState, RecurrenceFigureState, Figure } from '@/lib/figures'
+import { FigureState, RecurrenceFigureState } from '@/lib/figures'
 import PanelBand from './PanelBand'
 import ColorBlock from './ColorBlock'
 import Input from './Input'
@@ -9,7 +10,7 @@ import Errors from './Errors'
 export default function RecurrencePanel({state, figure, active, move}: 
     {
         state: State<RecurrenceFigureState>,
-        figure: Figure,
+        figure: PanelFigure,
         active: State<boolean>,
         move: (f: FigureState, n: number) => void,
     }) {
