@@ -1,30 +1,73 @@
-import {useState} from 'react'
+import {useEffect, useId, useState} from 'react'
 
-import {State,get,set} from '@/lib/State'
+import {State, get, set} from '@/lib/State'
+import {parseNumberInput} from '@/lib/numberInput'
 
-export default function InputNumber({expr,size,right}:{
+export default function InputNumber({expr, size, right, label, validate}: {
     expr: State<number>,
     size?: number,
     right?: boolean,
-}){
-    const value = useState<string>(`${get(expr)}`)
-    const error=useState<boolean>(false)
-    return <input 
-        className={`app-input ${get(error)?'app-input--error':''}`}
-        style={{textAlign: right?'right':'left'}}
-        type="text" 
-        value={get(value)} 
-        onChange={(evt) => {
-            const s = evt.target.value
-            const v = parseFloat(s)
-            if (isNaN(v)) {
-                set(error, true)
-            } else {
-                set(error, false)
-                set(value, s)
-                set(expr, v)
-            }
-        }}
-        size={size || undefined}
-    />
+    label?: string,
+    validate?: (value: number) => string|undefined,
+}) {
+    const value = get(expr)
+    const [draft, setDraft] = useState(String(value))
+    const [dirty, setDirty] = useState(false)
+    const [submitted, setSubmitted] = useState(false)
+    const errorId = useId()
+    const parsed = parseNumberInput(draft)
+    const error = submitted
+        ? parsed === undefined ? 'Enter a finite number.' : validate?.(parsed)
+        : undefined
+
+    // External updates must not replace a draft that the user is still editing.
+    useEffect(() => {
+        if (!dirty) setDraft(String(value))
+    }, [value, dirty])
+
+    function commit() {
+        if (!dirty) return
+        if (parsed === undefined || validate?.(parsed)) {
+            setSubmitted(true)
+            return
+        }
+        set(expr, parsed)
+        setDraft(String(parsed))
+        setDirty(false)
+        setSubmitted(false)
+    }
+
+    return <span className="inline-flex flex-col">
+        <input
+            className={`app-input ${error ? 'app-input--error' : ''}`}
+            style={{textAlign: right ? 'right' : 'left'}}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={label}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
+            value={draft}
+            onChange={evt => {
+                setDraft(evt.target.value)
+                setDirty(true)
+                setSubmitted(false)
+            }}
+            onBlur={commit}
+            onKeyDown={evt => {
+                if (evt.key === 'Enter') {
+                    evt.preventDefault()
+                    commit()
+                } else if (evt.key === 'Escape') {
+                    evt.preventDefault()
+                    setDraft(String(value))
+                    setDirty(false)
+                    setSubmitted(false)
+                }
+            }}
+            size={size}
+        />
+        {error && <span id={errorId} role="alert" className="text-sm text-red-700">{error}</span>}
+    </span>
 }

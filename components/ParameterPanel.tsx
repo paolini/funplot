@@ -19,6 +19,7 @@ export function ParameterPanel({state, figure, active, move}:
 
     return <PanelBand 
                 tex={figure.tex} 
+                formulaClassName="app-parameter-formula"
                 active={active}
                 move={n => move(figure.state, n)}
                 >
@@ -27,17 +28,19 @@ export function ParameterPanel({state, figure, active, move}:
             <span>=</span>
             <Input expr={expr} />
             <div className="m-2"/>
-            <InputNumber expr={min} size={1}/>
+            <InputNumber expr={min} size={6} label="Minimum"
+                validate={value => value < get(max) ? undefined : 'Minimum must be less than maximum.'} />
             <input 
                 type="range" 
                 className="slider" 
                 value={get(expr)} 
                 min={get(min)}
                 max={get(max)}
-                step={0.001*(get(max)-get(min))}
+                step={0.00001*(get(max)-get(min))}
                 onChange={onChange(expr)}
             />
-            <InputNumber expr={max} size={1}/>
+            <InputNumber expr={max} size={6} label="Maximum"
+                validate={value => value > get(min) ? undefined : 'Maximum must be greater than minimum.'} />
             <Errors errors={figure.errors} />
         </div>
     </PanelBand>

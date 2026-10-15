@@ -44,6 +44,16 @@ body {
     background-color: var(--input-error-bg);
   }
 
+  .app-parameter-formula {
+    @apply flex items-center shrink-0 overflow-x-auto overflow-y-hidden;
+    width: 7.2rem;
+  }
+
+  .app-parameter-formula .katex-display {
+    margin: 0;
+    text-align: left;
+  }
+
   .app-button {
     @apply border mx-1 px-4 rounded inline-flex items-center;
     color: rgb(var(--foreground-rgb));

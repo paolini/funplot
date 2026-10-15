@@ -5,16 +5,17 @@ import Separator from './Separator'
 import ColorBlock from './ColorBlock'
 import Formula from './Formula'
 
-export default function PanelBand({active, color, children, tex, move}:{
+export default function PanelBand({active, color, children, tex, move, formulaClassName}:{
     active: State<boolean>,
     color?: State<string>,
     tex: string
+    formulaClassName?: string,
     children: any,
     move: (n: number) => void,
 }) {
     return <div className="flex flex-row items-center">
         <ColorBlock color={color} active={active}/>
-        <Formula tex={tex} active={active}/>
+        <Formula tex={tex} active={active} className={formulaClassName}/>
         {get(active) && <Separator />}
         {get(active) && children}
         {get(active) &&

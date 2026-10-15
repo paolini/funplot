@@ -2,17 +2,18 @@ import 'katex/dist/katex.min.css'
 import TeX from '@matejmazur/react-katex'
 import { State, get, set } from '@/lib/State'
 
-export default function Formula({tex,active}:{
+export default function Formula({tex,active,className = ''}:{
     tex: string,
-    active: State<boolean>
+    active: State<boolean>,
+    className?: string,
 }) {
     if (get(active)) return <TeX 
-            className="px-1 hover:bg-blue-300 border border-blue-200 hover:border-blue-400 rounded" 
+            className={`px-1 hover:bg-blue-300 border border-blue-200 hover:border-blue-400 rounded ${className}`}
             math={tex} 
             onClick={() => set(active, false)}
             block />
     else return <TeX 
-            className="hover:bg-blue-300 hover:border rounded" 
+            className={`hover:bg-blue-300 hover:border rounded ${className}`}
             math={tex} 
             onClick={() => set(active, true)}
         />

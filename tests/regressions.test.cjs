@@ -208,3 +208,35 @@ test('coincident pinch pointers do not produce invalid scales', () => {
     assert.equal(gesture.end(1, result, viewport), false);
     assert.equal(gesture.end(2, result, viewport), false);
 });
+
+const {parseNumberInput} = require('../lib/numberInput.ts');
+
+test('number fields accept complete decimal values with a dot or comma', () => {
+    for (const [text, expected] of [
+        ['0.005', 0.005], ['0,005', 0.005], ['00.0500', 0.05],
+        ['-0,25', -0.25], ['.5', 0.5], [',5', 0.5], ['0.', 0],
+        ['-10', -10], ['+2', 2], ['  1,25  ', 1.25],
+        ['2e-3', 0.002], ['-1,5e+2', -150],
+    ]) assert.equal(parseNumberInput(text), expected, text);
+});
+
+test('empty or incomplete number drafts do not turn into a committed value', () => {
+    for (const text of ['', ' ', '-', '+', '.', ',', '-.', '1e', '1e-']) {
+        assert.equal(parseNumberInput(text), undefined, text);
+    }
+});
+
+test('number fields reject trailing junk, mixed separators and non-finite values', () => {
+    for (const text of ['1abc', '1.2.3', '1,2.3', '1,000,000', 'Infinity', 'NaN', '1e999', '0x10', '1 2']) {
+        assert.equal(parseNumberInput(text), undefined, text);
+    }
+});
+
+test('an unset parameter is displayed as a question mark rather than undefined', () => {
+    for (const expr of ['', '   ', 'undefined']) {
+        const figure = createFigure({...newPanel('parameter').figure, expr}, ['c']);
+        assert.equal(figure.tex, 'c = ?');
+    }
+    const figure = createFigure({...newPanel('parameter').figure, expr: '0.125'}, ['c']);
+    assert.equal(figure.tex, 'c = 0.125');
+});

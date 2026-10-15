@@ -415,7 +415,8 @@ function parameterFigure(state: ParameterState, parameters: string[]): Figure {
         errors.push(`${e}`)
     }
     try {
-        tex = `${state.name} = ${parse(state.expr).toTex()}`
+        const expressionTex = parse(state.expr).toTex()
+        tex = `${state.name || '?'} = ${expressionTex === 'undefined' ? '?' : expressionTex}`
         // MathJax.Hub.Queue(["Typeset", MathJax.Hub])
     } catch(e) {
         tex = `\\text{parse error}`
